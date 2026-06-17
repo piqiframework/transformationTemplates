@@ -7,7 +7,7 @@
   {% assign telecom = msg.telecom | where: "value" | first %}
   "telecom": "{% include 'json_escape' value: telecom.value %}",
   {% assign email = msg.telecom | where: "system", "email" | first %}
-  "email": "{% include 'json_escape' value: email.value %}",
+  "emailAddress": "{% include 'json_escape' value: email.value %}",
   {% if msg.address and msg.address.size > 0 %}
     {% assign first_addr = msg.address | first %}
     {% assign addr_text = first_addr.text %}
