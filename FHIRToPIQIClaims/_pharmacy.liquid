@@ -1,0 +1,151 @@
+"pharmacyClaim": [
+  {% assign pharmComma = false %}
+  {% for eob in eobs %}
+    {% assign typeCode = eob.type.coding[0].code | downcase %}
+    {% assign subTypeCode = eob.subType.coding[0].code | downcase %}
+    {% if typeCode == "pharmacy" or subTypeCode == "pharmacy" %}
+
+      {% assign hasTotals = false %}
+      {% if eob.total.size > 0 %}{% assign hasTotals = true %}{% endif %}
+
+      {% if hasTotals %}
+        {% assign totals = eob.total %}
+      {% else %}
+        {% assign totals = "" | split: "" | push: nil %}
+      {% endif %}
+
+      {% for tot in totals %}
+        {% if pharmComma %},{% endif %}
+        {
+          {% for si in eob.supportingInfo %}
+            {% assign siCode = si.category.coding[0].code %}
+
+            {% if siCode == "dawcode" or siCode == "daw" %}
+            "dawCode": "{{ si.valueCoding.code | default: si.valueString }}",
+            {% endif %}
+
+            {% if siCode == "dayssupply" %}
+            "daysSupply": "{{ si.valueQuantity.value | default: si.valueInteger | default: si.valueString }}",
+            {% endif %}
+
+            {% if siCode == "refillnum" or siCode == "refillnumber" %}
+            "refillNumber": "{{ si.valueQuantity.value | default: si.valueInteger | default: si.valueString }}",
+            {% endif %}
+
+            {% if siCode == "rxorigincode" or siCode == "rxservicerefno" %}
+            "rxServiceReferenceNumber": "{{ si.valueString | default: si.valueCoding.code }}",
+            {% endif %}
+
+            {% if siCode == "rxorigincode" or siCode == "prescriptionorigin" %}
+            "prescriptionOriginCode": "{{ si.valueCoding.code | default: si.valueString }}",
+            {% endif %}
+
+            {% if siCode == "brandgenericindicator" or siCode == "planbrandgenind" %}
+            "planReportedBrandGenericCode": {
+              "codings": [
+                {
+                  "system": "{{ si.valueCoding.system }}",
+                  "code": "{{ si.valueCoding.code }}",
+                  "display": "{{ si.valueCoding.display | default: si.valueCoding.code }}"
+                }
+              ],
+              "text": "{{ si.valueCoding.display | default: si.valueCoding.code }}"
+            },
+            {% endif %}
+
+          {% endfor %}
+
+          {% for adj in eob.adjudication %}
+            {% if adj.category.coding[0].code == "benefit" and adj.amount %}
+            "claimIdentifierAmount": "{{ adj.amount.value }}",
+            {% endif %}
+          {% endfor %}
+
+          {% for item in eob.item %}
+
+            {% if item.productOrService %}
+              {% for coding in item.productOrService.coding %}
+                {% if coding.system contains "ndc" or coding.system contains "NDC" %}
+                "nationalDrugCode": {
+                  "codings": [
+                    {
+                      "system": "{{ coding.system }}",
+                      "code": "{{ coding.code }}",
+                      "display": "{{ coding.display | default: coding.code }}"
+                    }
+                  ],
+                  "text": "{{ coding.display | default: coding.code }}"
+                },
+                {% break %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+
+            {% if item.quantity.value %}
+            "quantityDispensed": "{{ item.quantity.value }}",
+            {% endif %}
+
+            {% if item.quantity.unit %}
+            "quantityQualifierCode": {
+              "codings": [
+                {
+                  "system": "http://unitsofmeasure.org",
+                  "code": "{{ item.quantity.code | default: item.quantity.unit }}",
+                  "display": "{{ item.quantity.unit }}"
+                }
+              ],
+              "text": "{{ item.quantity.unit }}"
+            },
+            {% endif %}
+
+            {% for adj in item.adjudication %}
+              {% if adj.category.coding[0].code == "drugcost" or adj.category.coding[0].code == "benefit" %}
+              "drugCost": "{{ adj.amount.value }}",
+              {% break %}
+              {% endif %}
+            {% endfor %}
+
+            {% for ext in item.extension %}
+              {% if ext.url contains "compoundCode" or ext.url contains "compound-code" %}
+              "compoundCode": {
+                "codings": [
+                  {
+                    "system": "{{ ext.valueCoding.system }}",
+                    "code": "{{ ext.valueCoding.code }}",
+                    "display": "{{ ext.valueCoding.display | default: ext.valueCoding.code }}"
+                  }
+                ],
+                "text": "{{ ext.valueCoding.display | default: ext.valueCoding.code }}"
+              },
+              {% break %}
+              {% endif %}
+            {% endfor %}
+
+          {% endfor %}
+
+          {% if tot %}
+            {% assign totCode = tot.category.coding[0].code %}
+            "adjudicationAmountType": {
+              "codings": [
+                {% assign tatComma = false %}
+                {% for coding in tot.category.coding %}
+                  {% if tatComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign tatComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ tot.category.text | default: tot.category.coding[0].display | default: tot.category.coding[0].code }}"
+            },
+            "totalAmount": "{{ tot.amount.value }}",
+          {% endif %}
+        }
+        {% assign pharmComma = true %}
+      {% endfor %}
+
+    {% endif %}
+  {% endfor %}
+]

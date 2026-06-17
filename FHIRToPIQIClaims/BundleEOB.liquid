@@ -1,0 +1,23 @@
+{% assign entries = msg.entry | to_array -%}
+{% assign resources = entries | map: "resource" -%}
+{% assign eobs        = resources | where: "resourceType", "ExplanationOfBenefit" -%}
+{% assign coverages   = resources | where: "resourceType", "Coverage" -%}
+{% assign conditions  = resources | where: "resourceType", "Condition" -%}
+{% assign patients      = resources | where: "resourceType", "Patient" %}
+{% assign practitioners = resources | where: "resourceType", "Practitioner" %}
+{% assign organizations = resources | where: "resourceType", "Organization" %}
+{% assign patRef = eobs[0].patient.reference %}
+{% assign patient = patients | where_exp: "p", "p.id == patRef or ('urn:uuid:' | append: p.id) == patRef" | first %}
+{
+"patient": {
+  {% include '_member'    eobs: eobs patient: patient -%},
+  {% include '_claim'     eobs: eobs coverages: coverages -%},
+  {% include '_coverage'  eobs: eobs coverages: coverages -%},
+  {% include '_provider'  eobs: eobs practitioners: practitioners organizations: organizations -%},
+  {% include '_diagnosis' eobs: eobs conditions: conditions -%},
+  {% include '_procedure' eobs: eobs practitioners: practitioners -%},
+  {% include '_line'      eobs: eobs -%},
+  {% include '_pharmacy'  eobs: eobs -%},
+  {% include '_dental'    eobs: eobs -%}
+}
+}

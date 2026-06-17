@@ -1,20 +1,22 @@
 "medicalDevices": [
   {% for device in devices %}
     {
-      "deviceID": 
-      {% if device.udiCarrier[0].deviceIdentifier %}
-        "{{ device.udiCarrier[0].deviceIdentifier }}",
-	  {% elsif device.distinctIdentifier %}
-	     "{{ device.distinctIdentifier }}",
-      {% else %}
-        "{{ device.id }}",
-      {% endif %}
+      "distinctIdentifier": "{{ device.distinctIdentifier | default: device.identifier[0].value }}",
+      "deviceID": "{{ device.udiCarrier[0].deviceIdentifier | default: device.distinctIdentifier | default: device.id }}",
+      "carrierHRF": "{{ device.udiCarrier[0].carrierHRF }}",
+      "lotNumber": "{{ device.lotNumber }}",
+      "serialNumber": "{{ device.serialNumber }}",
+      "manufactureDate": "{{ device.manufactureDate }}",
 	  {% assign valueDateTime =  device.extension | where: 'url', 'http://hl7.org/fhir/StructureDefinition/device-implantDate' | first.valueDateTime %}
       "implantationDate": "{%if valueDateTime %}{{valueDateTime}}{% elseif device.manufactureDate %}{{ device.manufactureDate }}{% endif %}",
+      "expirationDate": "{{ device.expirationDate }}",
       "deviceStatus": {
         {% if device.status %}
         "codings": [
           {
+            "system": "http://hl7.org/fhir/ValueSet/device-status",
+            "code": "{{ device.status }}",
+            "display": "{{ device.status | capitalize }}"
           },
         ],
         "text": "{{ device.status | capitalize }}"
@@ -29,8 +31,9 @@
           },
           {% endfor %}
         ],
-        "text": "{{ device.type.text }}"
-      }
+        {%- assign deviceTypeText = device.type.text | default: device.type.coding[0].display | default: device.type.coding[0].code -%}
+        "text": "{% include 'json_escape' value: deviceTypeText %}"
+      },
       {% endif %}
     },
   {% endfor %}

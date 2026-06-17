@@ -1,0 +1,77 @@
+"claimDiagnosis": [
+  {% assign diagComma = false %}
+  {% for eob in eobs %}
+    {% for diag in eob.diagnosis %}
+      {% if diagComma %},{% endif %}
+      {
+        {% comment %} DIAG_DIAGNOSIS: prefer diagnosisCodeableConcept; fall through to diagnosisReference {% endcomment %}
+        {% assign diagCC = nil %}
+        {% if diag.diagnosisCodeableConcept %}
+          {% assign diagCC = diag.diagnosisCodeableConcept %}
+        {% elsif diag.diagnosisReference %}
+          {% for cond in conditions %}
+            {% assign cond1 = "Condition/" | append: cond.id %}
+            {% assign cond2 = "urn:uuid:" | append: cond.id %}
+            {% if diag.diagnosisReference.reference == cond1 or diag.diagnosisReference.reference == cond2 %}
+              {% assign diagCC = cond.code %}
+              {% break %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        {% if diagCC %}
+        "diagnosisCode": {
+          "codings": [
+            {% assign dcComma = false %}
+            {% for coding in diagCC.coding %}
+              {% if dcComma %},{% endif %}
+              {
+                "system": "{{ coding.system }}",
+                "code": "{{ coding.code }}",
+                "display": "{{ coding.display | default: coding.code }}"
+              }
+              {% assign dcComma = true %}
+            {% endfor %}
+          ],
+          "text": "{{ diagCC.text | default: diagCC.coding[0].display | default: diagCC.coding[0].code }}"
+        },
+        {% endif %}
+
+        {% comment %} DIAG_DIAG_TYPE {% endcomment %}
+        {% assign diagType = diag.type | first %}
+        {% if diagType %}
+        "diagnosisType": {
+          "codings": [
+            {% assign dtComma = false %}
+            {% for coding in diagType.coding %}
+              {% if dtComma %},{% endif %}
+              {
+                "system": "{{ coding.system }}",
+                "code": "{{ coding.code }}",
+                "display": "{{ coding.display | default: coding.code }}"
+              }
+              {% assign dtComma = true %}
+            {% endfor %}
+          ],
+          "text": "{{ diagType.text | default: diagType.coding[0].display | default: diagType.coding[0].code }}"
+        },
+        {% endif %}
+
+        {% comment %} DIAG_PRESENT_ON_ADM_IND {% endcomment %}
+        {% if diag.onAdmission %}
+        "presentOnAdmissionIndicator": "{{ diag.onAdmission.coding[0].code | default: diag.onAdmission.text }}",
+        {% endif %}
+
+        {% comment %} DIAG_E_CODE_IND: not in FHIR map, derive from system {% endcomment %}
+        {% if diagCC %}
+          {% assign diagSys = diagCC.coding[0].system %}
+          {% if diagSys contains "external-causes" or diagSys contains "icd10cm/E" %}
+          "eCodeIndicator": "true",
+          {% else %}
+          "eCodeIndicator": "false",
+          {% endif %}
+        {% endif %}
+      }
+      {% assign diagComma = true %}
+    {% endfor %}
+  {% endfor %}
+]

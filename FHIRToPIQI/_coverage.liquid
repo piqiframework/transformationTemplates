@@ -1,0 +1,87 @@
+"coverage":[
+{% for coverage in coverages %}
+{
+  "coveragePeriodStart": "{{ coverage.period.start }}",
+  "coveragePeriodEnd": "{{ coverage.period.end }}",
+  "coverageType": {
+    "codings": [
+      {% for coding in coverage.type.coding %}
+        {
+		  {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+    ],
+    {%- assign textValue = coverage.type.text | default: coverage.type.coding[0].display | default: coverage.type.coding[0].code -%}
+    "text": "{% include 'json_escape' value: textValue %}"
+  },
+  "coverageStatus": {
+    "codings": [
+       {
+        "system": "http://hl7.org/fhir/ValueSet/fm-status",
+        "code": "{{ coverage.status }}",
+        "display": "{{ coverage.status | capitalize }}"
+      }
+    ],
+    "text": "{{ coverage.status | capitalize }}"
+  },
+  {% assign group = nil %}
+  {% assign plan = nil %}
+  {% for class in coverage.class %}
+    {% if (plan == nil and class.type.text == "plan" %}
+      {% assign plan = class %}
+    {% elsif group == nil and class.type.text == "group" %}
+      {% assign group = class %}
+	{% else %} 
+      {% for coding in class.type.coding %}
+        {% if plan == nil and (coding.display == "plan" or coding.code == "plan") %}
+          {% assign plan = class %}
+          {% break %}
+        {% elsif group == nil and (coding.display == "group" or coding.code == "group") %}
+          {% assign group = class %}
+          {% break %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {% if plan != nil and group != nil %}
+      {% break %}
+    {% endif %}
+  {% endfor %}
+
+  "planIdentifier": "{{ plan.value.value | default: plan.value.display }}",
+  "planName": "{{ plan.name }}",
+  "groupIdentifier": "{{ group.value.value | default: group.value.display }}",
+  "groupName": "{{ group.name }}",
+
+  "payorIdentifier": "{{ coverage.insurer.reference }}",
+  "relationship": {
+    "codings": [
+      {% for coding in coverage.relationship.coding %}
+        {
+		  {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+    ],
+    {%- assign textValue = coverage.relationship.text | default: coverage.relationship.coding[0].display | default: coverage.relationship.coding[0].code -%}
+    "text": "{% include 'json_escape' value: textValue %}"
+  },
+  "memberIdentifier": "{{ coverage.identifier[0].value }}",
+  "memberIdentiferType": {
+    "codings": [
+      {% for coding in coverage.identifier[0].type.coding %}
+        {
+		  {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+    ],
+    {%- assign textValue = coverage.identifier[0].type.text | default: coverage.identifier[0].type.coding[0].display | default: coverage.identifier[0].type.coding[0].code -%}
+    "text": "{% include 'json_escape' value: textValue %}"
+  },
+  {% if coverage.subscriberId == empty or coverage.subscriberId[0] %}
+    "subscriberIdentifier": "{{ coverage.subscriberId[0].value | default: coverage.subscriber.identifier.value | default: coverage.subscriber.reference }}",
+  {% else %}
+    "subscriberIdentifier": "{{ coverage.subscriberId | default: coverage.subscriber.identifier.value | default: coverage.subscriber.reference }}",
+  {% endif %}
+},
+{% endfor %}
+],

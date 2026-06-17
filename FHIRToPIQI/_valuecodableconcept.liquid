@@ -1,3 +1,3 @@
 "system": "{{ coding.valueCoding.system }}",
 "code": "{{ coding.valueCoding.code }}",
-"display": "{{ coding.valueCoding.display }}"
+"display": "{% include 'json_escape' value: coding.valueCoding.display %}"

@@ -1,7 +1,17 @@
 "conditions":[
 {% for entry in conditions %}
 {
-  "conditionType":"{{ entry.category[0].coding[0].display | default: 'Problem' }}",
+  "conditionCategory": {
+    "codings": [
+      {% for coding in entry.category[0].coding %}
+        {
+	      {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+    ],
+    {% assign categoryText = entry.category[0].text | default: entry.category[0].coding[0].display | default: entry.category[0].coding[0].code %}
+    "text": "{% include 'json_escape' value: categoryText %}"
+  },
   "conditionStatus": {
   {% if entry.clinicalStatus and entry.clinicalStatus.coding %}
   "codings": [
@@ -11,8 +21,33 @@
       },
     {% endfor %}
   ],
-  "text": "{{ entry.clinicalStatus.text }}"
+  {% assign statusText = entry.clinicalStatus.text | default: entry.clinicalStatus.coding[0].display | default: entry.clinicalStatus.coding[0].code %}
+  "text": "{% include 'json_escape' value: statusText %}"
   {% endif %}
+  },
+  "clinicalStatus": {
+  {% if entry.clinicalStatus and entry.clinicalStatus.coding %}
+  "codings": [
+    {% for coding in entry.clinicalStatus.coding %}
+      {
+	    {% include '_codableconcept' coding: coding -%}
+      },
+    {% endfor %}
+  ],
+  {% assign statusText = entry.clinicalStatus.text | default: entry.clinicalStatus.coding[0].display | default: entry.clinicalStatus.coding[0].code %}
+  "text": "{% include 'json_escape' value: statusText %}"
+  {% endif %}
+  },
+  "verificationStatus": {
+    "codings": [
+      {% for coding in entry.verificationStatus.coding %}
+        {
+	      {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+    ],
+    {% assign statusText = entry.verificationStatus.text | default: entry.verificationStatus.coding[0].display | default: entry.verificationStatus.coding[0].code %}
+    "text": "{% include 'json_escape' value: statusText %}"
   },
   "condition": {
     "codings": [
@@ -22,15 +57,17 @@
       },
       {% endfor %}
     ],
-    "text": "{{ entry.code.text | default: entry.code.coding[0].display }}"
+    {% assign textValue = entry.code.text | default: entry.code.coding[0].display | default: entry.code.coding[0].code %}
+    "text": "{% include 'json_escape' value: textValue %}"
   },
-  "effectiveDate": "{{ entry.recordedDate }}",
+  {% assign assertedDateExt = entry.extension | where: "url", "http://hl7.org/fhir/StructureDefinition/condition-assertedDate" | first  %}
+  "assertedDate": "{{ assertedDateExt.valueDateTime | default: entry.recordedDate }}",
+  "recordedDate": "{{ entry.recordedDate }}",
   {% if entry.onsetDateTime %}
     "onsetDate": "{{ entry.onsetDateTime }}",
   {% elsif entry.onsetPeriod.start %}
     "onsetDate": "{{ entry.onsetPeriod.start }}",
   {% endif %}
-
   {% if entry.abatementDateTime %}
     "resolutionDate": "{{ entry.abatementDateTime }}"
   {% elsif entry.abatementPeriod.end %}

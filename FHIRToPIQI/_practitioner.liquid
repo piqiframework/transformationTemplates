@@ -1,0 +1,130 @@
+"practitioners":[
+{% assign processed_practitioners = "" %}
+{% assign first_item = true %}
+{% for practitioner in practitioners %}
+    {% assign npi = null %}
+    {% for ident in practitioner.identifier %}
+      {% assign system_lower = ident.system | downcase %}
+      {% if system_lower contains "hl7" %}
+        {% assign npi = ident %}
+        {% break %}
+      {% endif %}
+    {% endfor %}
+    {% if npi == nil %}
+      {% assign npi = practitioner.identifier | first %}
+    {% endif %}
+    
+    {% assign practitionerId = "" %}
+    {% if npi and npi.value %}
+      {% assign practitionerId = npi.value | strip %}
+    {% endif %}
+    
+    {% assign name = practitioner.name | first %}
+    {% assign practitionerName = "" %}
+    {% if name.text -%}
+      {% assign practitionerName = name.text %}
+    {% elsif name.given or name.family -%}
+      {% assign given = name.given | join: ' ' %}
+      {% if name.family %}
+        {% assign practitionerName = given | append: ' ' | append: name.family | strip %}
+      {% else %}
+        {% assign practitionerName = given | strip %}
+      {% endif %}
+    {% endif %}
+
+    {% assign first_addr = practitioner.address | first %}
+    {% assign addr_text = first_addr.text %}
+    {% if addr_text == nil or addr_text == empty %}
+      {% assign addr_text = "" %}
+      {% if first_addr.line %}
+        {% assign addr_text = first_addr.line | join: " " %}
+      {% endif %}
+      {% if first_addr.city %}
+        {% if addr_text != "" %}
+          {% assign addr_text = addr_text | append: ", " %}
+        {% endif %}
+        {% assign addr_text = addr_text | append: first_addr.city %}
+      {% endif %}
+      {% if first_addr.state %}
+        {% if addr_text != "" %}
+          {% assign addr_text = addr_text | append: ", " %}
+        {% endif %}
+        {% assign addr_text = addr_text | append: first_addr.state %}
+      {% endif %}
+      {% if first_addr.postalCode %}
+        {% if addr_text != "" %}
+          {% assign addr_text = addr_text | append: ", " %}
+        {% endif %}
+        {% assign addr_text = addr_text | append: first_addr.postalCode %}
+      {% endif %}
+      {% if first_addr.country %}
+        {% if addr_text != "" %}
+          {% assign addr_text = addr_text | append: ", " %}
+        {% endif %}
+        {% assign addr_text = addr_text | append: first_addr.country %}
+      {% endif %}
+    {% endif %}
+
+    {% assign telecom = practitioner.telecom | where: "value" | first %}
+    {% assign telecomValue = "" %}
+    {% if telecom %}
+      {% assign telecomValue = telecom.value %}
+    {% endif %}
+
+    {% assign targetRoleRef1 = practitioner.id | prepend : 'urn:uuid:' %}
+    {% assign targetRoleRef2 = practitioner.id | prepend : 'Practitioner/' %}
+    {% assign roleText = "" %}
+    
+    {% assign foundRole = null %}
+    {% if practitionerRoles.size > 0 %}
+      {% for role in practitionerRoles %}
+        {% if role.practitioner.reference == targetRoleRef1 or role.practitioner.reference == targetRoleRef2 %}
+          {% assign foundRole = role %}
+          {% assign roleText = role.code[0].text | default: role.code[0].coding[0].display | default: role.code[0].coding[0].code | default: "" %}
+          {% break %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {% comment %} Create unique key from all field values {% endcomment %}
+    {% assign unique_key = practitionerId | append: "|" | append: practitionerName | append: "|" | append: addr_text | append: "|" | append: telecomValue | append: "|" | append: practitioner.active | append: "|" | append: roleText %}
+    
+    {% comment %} Check if this practitioner object is unique {% endcomment %}
+    {% unless processed_practitioners contains unique_key %}
+      {% assign processed_practitioners = processed_practitioners | append: "||" | append: unique_key %}
+      
+      {% if first_item == false %},{% endif %}
+        {
+          {% if npi and npi.value %}
+            "practitionerIdentifier": "{% include 'json_escape' value: practitionerId %}",
+          {% endif %}
+          {% if practitionerName != "" %}
+          "practitionerName": "{% include 'json_escape' value: practitionerName %}",
+          {% endif %}
+
+          "practitionerAddress": "{% include 'json_escape' value: addr_text %}",
+
+          "practitionerTelecom" : "{% include 'json_escape' value: telecomValue %}",
+
+          {% if practitioner.active %}
+          "practitionerStatus": {"text": "active"},
+          {% elsif practitioner.active != nil %}
+          "practitionerStatus": {"text": "inactive"},
+          {% endif %}
+
+
+          "practitionerRole": {
+            "codings": [
+              {% for coding in foundRole.code[0].coding %}
+                {
+                  {% include '_codableconcept' coding: coding -%}
+                },
+              {% endfor %}
+            ],
+            "text": "{% include 'json_escape' value: roleText %}"
+          },
+        }
+      {% assign first_item = false %}
+    {% endunless %}
+{% endfor %}
+],

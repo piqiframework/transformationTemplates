@@ -1,0 +1,81 @@
+"provenance":[
+{% for provenance in provenances %}
+{
+  "agentIdentifier": "{{ provenance.agent[0].who.reference }}",
+  "agentName": "{{ provenance.agent[0].who.display }}",
+  "agentType": {
+    "codings": [
+      {% for coding in provenance.agent[0].type.coding %}
+        {
+		  {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+    ],
+    {%- assign typeText = provenance.agent[0].type.text | default: provenance.agent[0].type.coding[0].display | default: provenance.agent[0].type.coding[0].code -%}
+    "text": "{% include 'json_escape' value: typeText %}"
+  },
+
+  {% for agent in provenance.agent %}
+    {% if agent.who.type == "Organization" %}
+      {% assign firstOrgAgentId = agent %}
+      {% break %}
+    {% endif %}
+	{%- assign refPrefix = agent.who.reference | slice: 0, 12 | downcase -%}
+	{% if refPrefix == "organization" %}
+      {% assign firstOrgAgentId = agent %}
+      {% break %}
+	{% endif %}
+  {% endfor %}
+  "agentOrganizationIdentifier": "{{ firstOrgAgentId.who.reference }}",
+  "agentOrganizationName": "{{ firstOrgAgentId.who.display }}",
+
+  {% assign authorType = nil %}
+  {% assign transmitterType = nil %}
+  {% for agent in provenance.agent %}
+    {% if (authorType == nil and agent.type.text == "Author") %}
+      {% assign authorType = agent.type %}
+    {% elsif transmitterType == nil and agent.type.text == "Transmitter" %}
+      {% assign transmitterType = agent.type %}
+	{% else %} 
+      {% for coding in agent.type.coding %}
+        {% if authorType == nil and (coding.display == "Author" or coding.code == "author") %}
+          {% assign authorType = agent.type %}
+          {% break %}
+        {% elsif transmitterType == nil and (coding.display == "Transmitter" or coding.code == "transmitter") %}
+          {% assign transmitterType = agent.type %}
+          {% break %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {% if authorType != nil and transmitterType != nil %}
+      {% break %}
+    {% endif %}
+  {% endfor %}
+
+  "authorType": {
+    "codings": [
+      {% for coding in authorType.coding %}
+        {
+		  {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+    ],
+    {%- assign typeText = authorType.text | default: authorType.coding[0].display | default: authorType.coding[0].code -%}
+    "text": "{% include 'json_escape' value: typeText %}"
+  },
+  "transmitterType": {
+    "codings": [
+      {% for coding in transmitterType.coding %}
+        {
+		  {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+    ],
+    {%- assign typeText = transmitterType.text | default: transmitterType.coding[0].display | default: transmitterType.coding[0].code -%}
+    "text": "{% include 'json_escape' value: typeText %}"
+  },
+  "recordedDateTime": "{{ provenance.recorded }}",
+},
+{% endfor %}
+],

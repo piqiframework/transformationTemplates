@@ -4,16 +4,18 @@
   "administrationDate": "{{ immunization.occurrenceDateTime }}",
   "expirationDate": "{{ immunization.expirationDate }}",
   "lotNumber": "{{ immunization.lotNumber }}",
+  "primarySource": {{ immunization.primarySource }},
   "reaction": {
 	"codings": [
 	  {% for reaction in immunization.reaction %}
 		{% if reaction.detail.display %}
 		{
-		  "display": "{{ reaction.detail.display | strip }}"
+		  "display": "{% include 'json_escape' value: reaction.detail.display %}"
 		}{% unless forloop.last %},{% endunless %}
 		{% endif %}
 	  {% endfor %}
-	]
+	],
+	"text": "{% include 'json_escape' value:  immunization.reaction[0].detail.display %}"
   },
   "immunization": {
 	"codings": [
@@ -23,18 +25,29 @@
 	  }{% unless forloop.last %},{% endunless %}
 	  {% endfor %}
 	],
-	"text": "{{ immunization.vaccineCode.text | strip }}"
+	"text": "{% include 'json_escape' value: immunization.vaccineCode.text | default: immunization.vaccineCode.coding[0].display | default: immunization.vaccineCode.coding[0].code %}"
   },
   "immunizationStatus": {
-  "codings": [
-    {
-      "system": "http://hl7.org/fhir/event-status",
-      "code": "{{ immunization.status }}",
-      "display": "{{ immunization.status }}"      
-    }
-  ],
-  "text": "{{ immunization.status }}"
-},
+    "codings": [
+      {
+        "system": "http://hl7.org/fhir/event-status",
+        "code": "{{ immunization.status }}",
+        "display": "{{ immunization.status | capitalize }}"      
+      }
+    ],
+    "text": "{{ immunization.status | capitalize }}"
+  },
+  "immunizationStatusReason": {
+    "codings": [
+      {% for coding in immunization.statusReason.coding %}
+        {
+          {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+    ],
+    {%- assign reasonText =  immunization.statusReason.text | default: immunization.statusReason.coding[0].display | default: immunization.statusReason.coding[0].code -%}
+    "text": "{% include 'json_escape' value: reasonText %}"
+  },
 },
 {% endfor %}
 ],

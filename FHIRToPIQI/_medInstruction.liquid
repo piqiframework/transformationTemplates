@@ -1,7 +1,6 @@
 {% if dosage.text %}
 
-  {% assign d = dosage.text | strip | replace: '\r\n', ' ' | replace: '\r', ' ' | replace: '\n', ' ' %}
-  "instructions": "{{ d }}",
+  "instructions": "{% include 'json_escape' value: dosage.text %}",
 
 {% else %}
   {% if dosage.timing and dosage.timing.repeat %}

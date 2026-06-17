@@ -1,49 +1,111 @@
 {
+  {% assign ref_found = false %}
+  {% assign med_resource = null %}
+  {% if med.medicationReference %}
+	{% for ref in refs %}
+      {% assign med1 = "Medication/" | append: ref.id %}
+      {% assign med2 = "urn:uuid:" | append: ref.id %}
+      {% if med.medicationReference.reference == med1 or med.medicationReference.reference == med2 %}
+		{% assign ref_found = true %}
+        {% assign med_resource = ref %}
+        {% break %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+
     "medication": {
-	  {% if med.medicationReference %}
-	  {% for ref in refs %}
-		{% assign med1 = "Medication/" | append: ref.id %}
-		{% assign med2 = "urn:uuid:" | append: ref.id %}
-		{% if med.medicationReference.reference == med1 or med.medicationReference.reference == med2 %}
-		  "codings": [
-		  {% for refCode in ref.code.coding %}
-		  {
-			{% include '_codableconcept' coding: refCode -%}
-		  },
-		  {% endfor %}
+	  {% comment %} Try to resolve medicationReference {% endcomment %}
+	  {% if ref_found and med_resource %}
+		{% if med_resource.identifier and med_resource.identifier.size > 0 %}
+		  "identifier": [
+		    {% for ident in med_resource.identifier %}
+		      {
+		        "system": "{{ ident.system }}",
+		        "value": "{{ ident.value }}"
+		      }, 
+		    {% endfor %}
 		  ],
-		  "text": "{{ ref.code.text | default: ref.code.coding[0].display }}",
 		{% endif %}
-	  {% endfor %}
+		"codings": [
+		  {% for refCode in med_resource.code.coding %}
+		    {
+			  {% include '_codableconcept' coding: refCode -%}
+		    },
+		  {% endfor %}
+		],
+        {% assign textValue = med_resource.code.text | default: med_resource.code.coding[0].display | default: med_resource.code.coding[0].code %}
+		"text": "{% include 'json_escape' value: textValue %}",
+	  {% else %}
+	    {% if med.medicationReference.identifier %}
+	      {% assign ident = med.medicationReference.identifier %}
+	      {% if ident.system and ident.value %}
+	        "codings": [
+	          {
+	            "system": "{{ ident.system }}",
+	            "code": "{{ ident.value }}",
+	            "display": "{{ med.medicationReference.display }}"
+	          }
+	        ],
+	        "text": "{% include 'json_escape' value: med.medicationReference.display %}",
+	      {% endif %}
+	    {% elsif med.medicationReference.display %}
+	      "text": "{% include 'json_escape' value: med.medicationReference.display %}",
+	    {% endif %}
 	  {% endif %}
 	  {% if med.medicationCodeableConcept.coding %}
-      "codings": [
-       
+        "codings": [
           {% for code in med.medicationCodeableConcept.coding %}
             {
 			  {% include '_codableconcept' coding: code -%}
             },
           {% endfor %}
-      ],
-      "text": "{{ med.medicationCodeableConcept.text }}"
+        ],
+        {% assign textValue = med.medicationCodeableConcept.text | default: med.medicationCodeableConcept.coding[0].display | default: med.medicationCodeableConcept.coding[0].code %}
+        "text": "{% include 'json_escape' value: textValue %}"
 	  {% endif %}
 	  {% if med.code %}
-      "codings": [
-       
+        "codings": [
           {% for code in med.code.coding %}
             {
 			  {% include '_codableconcept' coding: code -%}
             },
           {% endfor %}
-      ],
-      "text": "{{ med.code.text }}"
+        ],
+        {% assign textValue = med.code.text | default: med.code.coding[0].display | default: med.code.coding[0].code %}
+        "text": "{% include 'json_escape' value: textValue %}"
 	  {% endif %}
     },
+	"medicationCategory": {
+      "codings": [
+        {% for coding in med.category[0].coding %}
+          {
+		    {% include '_codableconcept' coding: coding -%}
+          },
+        {% endfor %}
+      ],
+      {%- assign medText = med.category[0].text | default: med.category[0].coding[0].display | default: med.category[0].coding[0].code -%}
+      "text": "{% include 'json_escape' value: medText %}"
+    },
+    {% if med.intent %}
+    "medicationIntent": {
+      "codings": [
+        {
+          "system": "http://hl7.org/fhir/ValueSet/medicationrequest-intent",
+          "code": "{{ med.intent }}",
+          "display": "{{ med.intent | capitalize }}"
+        },
+      ],
+      "text": "{{ med.intent | capitalize }}"
+    },
+    {% endif %}
 
     "startDate": "{% if med.dispenseRequest.validityPeriod.start %}{{ med.dispenseRequest.validityPeriod.start }}{% elsif med.effectivePeriod.start %}{{ med.effectivePeriod.start }}{% elsif med.authoredOn %}{{ med.authoredOn }}{% endif %}",
     "endDate": "{% if med.dispenseRequest.validityPeriod.end %}{{ med.dispenseRequest.validityPeriod.end }}{% elsif med.effectivePeriod.end %}{{ med.effectivePeriod.end }}{% endif %}",
     {% if med.dosageInstruction.size >0 %}
 	  {% include '_medInstruction' dosage: med.dosageInstruction[0] -%}
+	{% elsif med.dosage.size > 0 %}
+	  {% include '_medInstruction' dosage: med.dosage[0] -%}
 	{%endif %}
 	{% if med.dosageInstruction[0].doseAndRate[0].doseQuantity %}
 	"doseQuantity": "{% if med.dosageInstruction[0].doseAndRate[0].doseQuantity.value %}{{ med.dosageInstruction[0].doseAndRate[0].doseQuantity.value }}{% endif %}",
@@ -58,7 +120,18 @@
 	 ],
 	  "text": "{{ unit.unit }}"
     },
-	{% else %}
+    "doseAmount": "{% if med.dosageInstruction[0].doseAndRate[0].doseQuantity.value %}{{ med.dosageInstruction[0].doseAndRate[0].doseQuantity.value }}{% endif %}",
+    "doseAmountUnit": {
+	  "codings": [
+	  {
+      "system": "{{ unit.system }}",
+      "code": "{{ unit.code }}",
+      "unit": "{{ unit.unit }}"
+	  }
+	 ],
+	  "text": "{{ unit.unit }}"
+    },
+	{% elsif med.dosageInstruction[0].doseQuantity %}
 	"doseQuantity": "{% if med.dosageInstruction[0].doseQuantity.value %}{{ med.dosageInstruction[0].doseQuantity.value }}{% endif %}",
     "doseQuantityUnit": {
 	  "codings": [
@@ -71,8 +144,66 @@
 	 ],
 	  "text": "{{ dq.unit }}"
     },
-	{% endif %}
-    {%if med.dosage.dose %}
+    "doseAmount": "{% if med.dosageInstruction[0].doseQuantity.value %}{{ med.dosageInstruction[0].doseQuantity.value }}{% endif %}",
+    "doseAmountUnit": {
+	  "codings": [
+	  {
+      "system": "{{ dq.system }}",
+      "code": "{{ dq.code }}",
+      "unit": "{{ dq.unit }}"
+	  }
+	 ],
+	  "text": "{{ dq.unit }}"
+    },
+	{% elsif med.dosage.size > 0 and med.dosage[0].doseAndRate[0].doseQuantity %}
+	{% assign dq = med.dosage[0].doseAndRate[0].doseQuantity %}
+	"doseQuantity": "{{ dq.value }}",
+    "doseQuantityUnit": {
+	  "codings": [
+	  {
+      "system": "{{ dq.system }}",
+      "code": "{{ dq.code }}",
+      "unit": "{{ dq.unit }}"
+	  }
+	 ],
+	  "text": "{{ dq.unit }}"
+    },
+    "doseAmount": "{{ dq.value }}",
+    "doseAmountUnit": {
+	  "codings": [
+	  {
+      "system": "{{ dq.system }}",
+      "code": "{{ dq.code }}",
+      "unit": "{{ dq.unit }}"
+	  }
+	 ],
+	  "text": "{{ dq.unit }}"
+    },
+	{% elsif med.dosage.size > 0 and med.dosage[0].doseQuantity %}
+	{% assign dq = med.dosage[0].doseQuantity %}
+	"doseQuantity": "{{ dq.value }}",
+    "doseQuantityUnit": {
+	  "codings": [
+	  {
+      "system": "{{ dq.system }}",
+      "code": "{{ dq.code }}",
+      "unit": "{{ dq.unit }}"
+	  }
+	 ],
+	  "text": "{{ dq.unit }}"
+    },
+    "doseAmount": "{{ dq.value }}",
+    "doseAmountUnit": {
+	  "codings": [
+	  {
+      "system": "{{ dq.system }}",
+      "code": "{{ dq.code }}",
+      "unit": "{{ dq.unit }}"
+	  }
+	 ],
+	  "text": "{{ dq.unit }}"
+    },
+    {%elsif med.dosage.dose %}
 	"doseAmount": "{{ med.dosage.dose.value }}",
 	"doseAmountUnit": {
 	  "codings": [
@@ -96,35 +227,69 @@
           },
         {% endfor %}
       ],
-      "text": "{{ route.text }}"
-	  {% else %}
+      {% assign routeText = route.text | default: route.coding[0].display | default: route.coding[0].code %}
+      "text": "{{ routeText }}"
+	  {% elsif med.dosage.size > 0 and med.dosage[0].route %}
+	   {% assign route = med.dosage[0].route %}
 	   "codings": [
-       {% if med.dosage.route.coding %}
+       {% for coding in route.coding %}
+        {
+		   {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+      ],
+      {% assign routeText = route.text | default: route.coding[0].display | default: route.coding[0].code %}
+      "text": "{{ routeText }}"
+	  {% elsif med.dosage.route.coding %}
+       "codings": [
        {% for coding in med.dosage.route.coding %}
         {
 		   {% include '_codableconcept' coding: coding -%}
         },
       {% endfor %}
-      {% endif %}
       ],
-      "text": "{{ med.dosage.route.text | default: med.dosage.route.coding[0].display | default: '' }}"
+      {% assign routeText = med.dosage.route.text | default: med.dosage.route.coding[0].display | default: med.dosage.route.coding[0].code %}
+      "text": "{{ routeText }}"
 	  {% endif %}
     },
 	
-    "adherence": {
-      {% if med.adherence and med.adherence.code.coding %}
-        "codings": [
-          {% for c in med.adherence.code.coding %}
-            {
-			  {% include '_codableconcept' coding: c -%}
-            },
-          {% endfor %}
-        ],
-        "text": "{{ med.adherence.code.text }}"
-      {% endif %}
-    },
-
+	{% if ref_found and med_resource.status %}
     "fillStatus": {
+      "codings": [
+        {
+          "system": "http://hl7.org/fhir/ValueSet/medication-status",
+          "code": "{{ med_resource.status }}",
+          "display": "{{ med_resource.status }}"
+        }
+      ],
+      "text": "{{ med_resource.status }}"
+    },
+    {% elsif type != "MedicationRequest" and med.status %}
+      "fillStatus": {
+        "codings": [
+          {
+            "system": "http://hl7.org/fhir/ValueSet/medication-statement-status",
+            "code": "{{ med.status }}",
+            "display": "{{ med.status }}"
+          }
+        ],
+        "text": "{{ med.status }}"
+      },
+	{% endif %}
+    {% if type == "MedicationRequest" and med.status %}
+      "requestStatus": {
+        "codings": [
+          {
+            "system": "http://hl7.org/fhir/ValueSet/medicationrequest-status",
+            "code": "{{ med.status }}",
+            "display": "{{ med.status }}"
+          }
+        ],
+        "text": "{{ med.status }}"
+      },
+	{% endif %}
+	
+    "adherence": {
       {% if med.statusReason.coding %}
         "codings": [
           {% for c in med.statusReason.coding %}
@@ -133,35 +298,41 @@
             },
           {% endfor %}
         ],
-        "text": "{{ med.statusReason.text }}"
+        {% assign adherenceText = med.statusReason.text | default: med.statusReason.coding[0].display | default: med.statusReason.coding[0].code %}
+        "text": "{% include 'json_escape' value: adherenceText %}"
       {% endif %}
     },
 
-    "indication": {
-      {% if med.reasonCode[0].coding %}
-        "codings": [
-          {% for c in med.reasonCode[0].coding %}
-            {
-			  {% include '_codableconcept' coding: c -%}
-            },
-          {% endfor %}
-        ],
-        "text": "{{ med.reasonCode[0].text }}"
-      {% endif %}
-    },
+    "indication": [
+      {% for rc in med.reasonCode %}
+        {
+          {% if rc.coding %}
+            "codings": [
+              {% for c in rc.coding %}
+                {
+			      {% include '_codableconcept' coding: c -%}
+                },
+              {% endfor %}
+            ],
+            {% assign indicationText = rc.text | default: rc.coding[0].display | default: rc.coding[0].code %}
+            "text":  "{% include 'json_escape' value: indicationText %}"
+          {% endif %}
+        },
+      {% endfor %}
+    ],
 
-    {% assign medDate = '' %}
+  {% assign medDate = '' %}
 
-{% if med.dateAsserted %}
-  {% assign medDate = med.dateAsserted %}
-{% elseif med.effectiveDateTime %}
-  {% assign medDate = med.effectiveDateTime %}
-{% elsif med.effectivePeriod %}
-  {% if med.effectivePeriod.start %}
-    {% assign medDate = med.effectivePeriod.start %}
+  {% if med.dateAsserted %}
+    {% assign medDate = med.dateAsserted %}
+  {% elsif med.effectiveDateTime %}
+    {% assign medDate = med.effectiveDateTime %}
+  {% elsif med.effectivePeriod %}
+    {% if med.effectivePeriod.start %}
+      {% assign medDate = med.effectivePeriod.start %}
+    {% endif %}
+  {% elsif med.authoredOn %}
+    {% assign medDate = med.authoredOn %}
   {% endif %}
-{% elsif med.authoredOn %}
-  {% assign medDate = med.authoredOn %}
-{% endif %}
-"statementDate": "{{ medDate }}",
+  "statementDate": "{{ medDate }}",
 },

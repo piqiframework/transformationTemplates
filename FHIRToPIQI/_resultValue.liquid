@@ -1,29 +1,36 @@
+{% unless resValueName %}{% assign resValueName = "resultValue" %}{% endunless %}
+{% unless resUnitName %}{% assign resUnitName = "resultUnit" %}{% endunless %}
 {% if component.valueQuantity %}
-  "resultValue": { 
+  {% if component.valueQuantity.value != nil %}
+  "{{ resValueName }}": { 
   "type": { "text": "PQ" },
   "text": "{{ component.valueQuantity.value }}"
   },
-  "resultUnit":{
+  {% endif %}
+  {% assign unitText = component.valueQuantity.unit | default: component.valueQuantity.code %}
+  {% if unitText %}
+  "{{ resUnitName }}":{
 	"codings": [
 	  {
-	    "system": "{{ component.valueQuantity.system }}",
-		"code": "{{ component.valueQuantity.code }}",
-		"display": "{{ component.valueQuantity.unit }}"
+	    {% if component.valueQuantity.system %}"system": "{{ component.valueQuantity.system }}",{% endif %}
+		{% if component.valueQuantity.code %}"code": "{{ component.valueQuantity.code }}",{% endif %}
+		{% if component.valueQuantity.unit %}"display": "{{ component.valueQuantity.unit }}"{% endif %}
 	}
     ],
-    "text": "{{ component.valueQuantity.unit }}"
+    "text": "{{ unitText }}"
   },
-
+  {% endif %}
 {% elsif component.valueString %}
-  "resultValue": { 
+  "{{ resValueName }}": { 
   "type": { "text": "ST"  },
-  "text": "{{ component.valueString }}"
+  "text": "{% include 'json_escape' value: component.valueString %}"
  },
-
-{% elsif entry.valueCodeableConcept %}
- 
- "resultValue":{
+{% elsif component.valueCodeableConcept %}
+ {% assign textValue = component.valueCodeableConcept.text | default: component.valueCodeableConcept.coding[0].display | default: component.valueCodeableConcept.coding[0].code %}
+ {% if component.valueCodeableConcept.coding.size > 0 or textValue %}
+ "{{ resValueName }}":{
   "type":{ "text": "CE"},
+  {% if component.valueCodeableConcept.coding.size > 0 %}
   "codings": [
 	{% for coding in component.valueCodeableConcept.coding %}
 	{
@@ -31,51 +38,123 @@
 	}{% unless forloop.last %},{% endunless %}
 	{% endfor %}
   ],
-  "text": "{{ component.valueCodeableConcept.text  | default: component.valueCodeableConcept.coding[0].display }}"
+  {% endif %}
+  {% if textValue %}
+  "text": "{% include 'json_escape' value: textValue %}"
+  {% endif %}
 },
-
+{% endif %}
 {% elsif component.valueBoolean != nil %}
-"resultValue":{
- "type":{"text": "ST" }, 
+"{{ resValueName }}":{
+ "type":{"text": "BL" }, 
  "text": "{{ component.valueBoolean }}"
 },
-
-{% elsif component.valueInteger %}
-"resultValue": { 
+{% elsif component.valueInteger != nil %}
+"{{ resValueName }}": { 
  "type":{ "text": "NM" },
  "text": "{{ component.valueInteger }}"
 },
-
 {% elsif component.valueRange %}
+{% assign lowVal = component.valueRange.low.value %}
+{% assign lowUnit = component.valueRange.low.unit | default: component.valueRange.low.code %}
+{% assign highVal = component.valueRange.high.value %}
+{% assign highUnit = component.valueRange.high.unit | default: component.valueRange.high.code %}
+{% assign rangeParts = "" | split: "" %}
+{% if lowVal != nil %}
+  {% if lowUnit %}
+    {% assign lowText = lowVal | append: " " | append: lowUnit %}
+  {% else %}
+    {% assign lowText = lowVal %}
+  {% endif %}
+  {% assign rangeParts = rangeParts | push: lowText %}
+{% endif %}
+{% if highVal != nil %}
+  {% if highUnit %}
+    {% assign highText = highVal | append: " " | append: highUnit %}
+  {% else %}
+    {% assign highText = highVal %}
+  {% endif %}
+  {% assign rangeParts = rangeParts | push: highText %}
+{% endif %}
+{% assign rangeText = rangeParts | join: " - " %}
+{% if rangeText != "" %}
 "referenceRange":{
- "type":{ "text": "NR" },
-  "text": "{{ component.valueRange.low.value }} {{ component.valueRange.low.unit }} - {{ component.valueRange.high.value }} {{ component.valueRange.high.unit }}",
-  "lowValue": "{{ component.valueRange.low.value }} {{ component.valueRange.low.unit }}",
-  "highValue": "{{ component.valueRange.high.value }} {{ component.valueRange.high.unit }}"
+ "type":{ "text": "IVL_PQ" },
+  "text": "{{ rangeText }}",
+  {% if lowVal != nil %}
+  {% if lowUnit %}
+  "lowValue": "{{ lowVal }} {{ lowUnit }}",
+  {% else %}
+  "lowValue": "{{ lowVal }}",
+  {% endif %}
+  {% endif %}
+  {% if highVal != nil %}
+  {% if highUnit %}
+  "highValue": "{{ highVal }} {{ highUnit }}"
+  {% else %}
+  "highValue": "{{ highVal }}"
+  {% endif %}
+  {% endif %}
 },
+{% endif %}
 {% elsif component.valueRatio %}
-"resultValue":{
- "type":{ "text": "SN" },
-  "text": "{{ component.valueRatio.numerator.value }} - {{ component.valueRatio.denominator.value }}",
-  "number": "{{ component.valueRatio.numerator.value }}",
-  "number2": "{{ component.valueRatio.denominator.value }}"
+{% assign numVal = component.valueRatio.numerator.value %}
+{% assign denomVal = component.valueRatio.denominator.value %}
+{% assign numUnit = component.valueRatio.numerator.unit | default: component.valueRatio.numerator.code %}
+{% assign denomUnit = component.valueRatio.denominator.unit | default: component.valueRatio.denominator.code %}
+{% assign ratioParts = "" | split: "" %}
+{% if numVal != nil %}
+  {% if numUnit %}
+    {% assign numText = numVal | append: " " | append: numUnit %}
+  {% else %}
+    {% assign numText = numVal %}
+  {% endif %}
+  {% assign ratioParts = ratioParts | push: numText %}
+{% endif %}
+{% if denomVal != nil %}
+  {% if denomUnit %}
+    {% assign denomText = denomVal | append: " " | append: denomUnit %}
+  {% else %}
+    {% assign denomText = denomVal %}
+  {% endif %}
+  {% assign ratioParts = ratioParts | push: denomText %}
+{% endif %}
+{% assign ratioText = ratioParts | join: " / " %}
+{% if numVal != nil or denomVal != nil %}
+"{{ resValueName }}":{
+ "type":{ "text": "RTO" },
+  "text": "{{ ratioText }}",
+  {% if numVal != nil %}
+  "numerator": "{{ numVal }}",
+  {% endif %}
+  {% if denomVal != nil %}
+  "denominator": "{{ denomVal }}"
+  {% endif %}
 },
-
+{% endif %}
 {% elsif component.valueTime %}
-"resultValue":{ 
-  "type":{ "text": "ST" },
+"{{ resValueName }}":{ 
+  "type":{ "text": "TM" },
   "text": "{{ component.valueTime }}"
 },
-
 {% elsif component.valueDateTime %}
-"resultValue":{
- "type":{ "text": "ST" },
+"{{ resValueName }}":{
+ "type":{ "text": "TS" },
  "text": "{{ component.valueDateTime }}"
 },
-
 {% elsif component.valuePeriod %}
-"resultValue":{
-  "type":{ "text": "ST" },
-  "text": "{{ component.valuePeriod.start }} - {{ component.valuePeriod.end }}"
+{% assign periodParts = "" | split: "" %}
+{% if component.valuePeriod.start %}
+  {% assign periodParts = periodParts | push: component.valuePeriod.start %}
+{% endif %}
+{% if component.valuePeriod.end %}
+  {% assign periodParts = periodParts | push: component.valuePeriod.end %}
+{% endif %}
+{% assign periodText = periodParts | join: " - " %}
+{% if periodText != "" %}
+"{{ resValueName }}":{
+  "type":{ "text": "IVL_TS" },
+  "text": "{{ periodText }}"
 },
+{% endif %}
 {% endif %}

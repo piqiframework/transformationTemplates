@@ -9,27 +9,34 @@
           },
           {% endfor %}
         ],
-        "text": "{{ report.code.text }}"
+        {%- assign reportCodeText =  report.code.text | default: report.code.coding[0].display | default: report.code.coding[0].code -%}
+        "text": "{% include 'json_escape' value: reportCodeText %}"
       },
-	  "interpretation": "{{ report.conclusion }}",
-	  "hasAttachment": "{% if report.presentedForm and report.presentedForm.size > 0 %}true{% else %}false{% endif %}",
-	  "test": {
+      {%- assign performerId =  report.performer[0].identifier.value | default: report.performer[0].reference -%}
+      "performerIdentifier": "{% include 'json_escape' value: performerId %}",
+      "performerName": "{{ report.performer[0].display }}",
+      "reportCategory": {
         "codings": [
-          {% for coding in report.code.coding %}
+          {% for coding in report.category[0].coding %}
           {
             {% include '_codableconcept' coding: coding -%}
           },
           {% endfor %}
         ],
-        "text": "{{ report.code.text }}"
+         {%- assign categoryText =  report.category[0].text | default: report.category[0].coding[0].display | default: report.category[0].coding[0].code -%}
+        "text": "{% include 'json_escape' value: categoryText %}"
       },
+	  "interpretation": "{{ report.conclusion }}",
+	  "hasAttachment": {% if report.presentedForm and report.presentedForm.size > 0 %}true{% else %}false{% endif %},
 	  "reportDateTime": "{{ report.effectiveDateTime }}",
       {% if report.effectiveDateTime %}
       "effectiveDate": "{{ report.effectiveDateTime }}",
       {% elsif report.effectivePeriod.start %}
       "effectiveDate": "{{ report.effectivePeriod.start }}",
       {% endif %}
-      "issued": "{{ report.issued }}",
+      "issueDate": "{{ report.issued }}",
+      "reportPeriodStart": "{{ report.effectivePeriod.start }}",
+      "reportPeriodEnd": "{{ report.effectivePeriod.end }}",
       {% if report.conclusionCode %}
       "conclusions": [
         {% for conclusion in report.conclusionCode %}
@@ -39,8 +46,41 @@
         {% endfor %}
       ],
       {% endif %}
-      {% if report.conclusion %}
-      "conclusionText": "{{ report.conclusion | strip_newlines | escape }}"
+      {%- assign conclusionText = conclusionCode.text | default: conclusionCodings[0].display | default: conclusionCodings[0].code -%}
+      "conclusionText": "{% include 'json_escape' value: conclusionText %}",
+      "reportStatus": {
+        "codings": [
+          {
+            "system": "http://hl7.org/fhir/ValueSet/diagnostic-report-status",
+            "code": "{{ report.status }}",
+            "display": "{{ report.status }}"
+          }
+        ],
+        "text": "{{ report.status }}"
+      },
+      {% assign targetRef = report.result[0].reference | remove: 'urn:uuid:' | remove: 'Observation/'%}
+ 
+      {% if targetRef %}
+        {% for obs in observations %}
+          {% if obs.id == targetRef %}
+            {% if report.code == null and obs.dataAbsentReason %}
+              "dataAbsentReason": {
+                "codings": [
+                  {% for coding in obs.dataAbsentReason.coding %}
+                  {
+                    {% include '_codableconcept' coding: coding -%}
+                  },
+                  {% endfor %}
+                ],
+                {% assign absentReasonText = obs.dataAbsentReason.text | default: obs.dataAbsentReason.coding[0].display | default: obs.dataAbsentReason.coding[0].code %}
+                "text": "{% include 'json_escape' value: absentReasonText %}"
+              },
+            {% endif %}
+
+            {% include '_resultValue' component: obs resValueName: "reportResultValue" resUnitName: "reportResultUnit" -%}
+            {% break %}
+          {% endif %}
+        {% endfor %}
       {% endif %}
     },
   {% endfor %}

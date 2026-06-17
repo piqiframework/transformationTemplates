@@ -1,40 +1,56 @@
-"carePlans": [
+"carePlan": [
   {% for plan in careplans %}
     {
-      "status": "{{ plan.status }}",
-      "intent": "{{ plan.intent }}",
-      {% if plan.category %}
-      "categories": [
-        {% for cat in plan.category %}
+      "planStatus": {
+        "codings": [
+          {
+            "system": "http://hl7.org/fhir/ValueSet/request-status",
+            "code": "{{ plan.status }}",
+            "display": "{{ plan.status }}"
+          }
+        ],
+        "text": "{{ plan.status }}"
+      },
+      "planIntent": {
+        "codings": [
+          {
+            "system": "http://hl7.org/fhir/ValueSet/care-plan-intent",
+            "code": "{{ plan.intent }}",
+            "display": "{{ plan.intent }}"
+          }
+        ],
+        "text": "{{ plan.intent }}"
+      },
+      {% if plan.category[0] %}
+      "planCategory": 
         {
           "codings": [
-            {% for coding in cat.coding %}
+            {% for coding in plan.category[0].coding %}
             {
               {% include '_codableconcept' coding: coding -%}
             },
             {% endfor %}
           ],
-          "text": "{{ cat.text }}"
-        }{% unless forloop.last %},{% endunless %}
-        {% endfor %}
-      ],
+          {%- assign catText = plan.category[0].text | default: plan.category[0].coding[0].display | default: plan.category[0].coding[0].code -%}
+          "text": "{% include 'json_escape' value: catText %}"
+        },
       {% endif %}
+      "planNarrative": "{% include 'json_escape' value: plan.text.div %}",
+      "planNarrativeStatus": {"text": "{% include 'json_escape' value: plan.text.status %}"},
       {% if plan.title %}
-      "title": "{{ plan.title }}",
+       "title": "{% include 'json_escape' value: plan.title %}",
       {% endif %}
       {% if plan.description %}
-      "description": "{{ plan.description }}",
+      "description": "{% include 'json_escape' value: plan.description %}",
       {% endif %}
-      {% if plan.period %}
-      "period": {
-        "start": "{{ plan.period.start }}",
-        "end": "{{ plan.period.end }}"
-      },
-      {% endif %}
+
+      {% assign effectiveDate = plan.period.start | default: plan.created | default: plan.period.end  %}
+      "effectiveDate": "{% include 'json_escape' value: effectiveDate %}",
+
       {% if plan.subject %}
       "subject": {
         "reference": "{{ plan.subject.reference }}",
-        "display": "{{ plan.subject.display }}"
+        "display": "{% include 'json_escape' value: plan.subject.display %}"
       },
       {% endif %}
       {% if plan.author %}
@@ -42,49 +58,6 @@
         "reference": "{{ plan.author.reference }}",
         "display": "{{ plan.author.display }}"
       },
-      {% endif %}
-      {% if plan.activity %}
-      "activities": [
-        {% for activity in plan.activity %}
-        {
-          {% if activity.detail %}
-          "detail": {
-            "status": "{{ activity.detail.status }}",
-            {% if activity.detail.category %}
-            "category": {
-              "codings": [
-                {% for coding in activity.detail.category.coding %}
-                {
-                  "{% include '_codableconcept' coding: coding -%}
-                },
-                {% endfor %}
-              ],
-              "text": "{{ activity.detail.category.text }}"
-            },
-            {% endif %}
-            {% if activity.detail.code %}
-            "code": {
-              "codings": [
-                {% for coding in activity.detail.code.coding %}
-                {
-                  {% include '_codableconcept' coding: coding -%}
-                },
-                {% endfor %}
-              ],
-              "text": "{{ activity.detail.code.text }}"
-            },
-            {% endif %}
-            {% if activity.detail.description %}
-            "description": "{{ activity.detail.description }}",
-            {% endif %}
-            {% if activity.detail.scheduledString %}
-            "scheduled": "{{ activity.detail.scheduledString }}"
-            {% endif %}
-          }
-          {% endif %}
-        }{% unless forloop.last %},{% endunless %}
-        {% endfor %}
-      ]
       {% endif %}
     },
   {% endfor %}

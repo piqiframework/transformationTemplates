@@ -1,0 +1,420 @@
+"medicalClaim": [
+  {% assign claimComma = false %}
+  {% for eob in eobs %}
+
+    {% assign typeCode = eob.type.coding[0].code | downcase %}
+    {% assign subTypeCode = eob.subType.coding[0].code | downcase %}
+
+    {% unless typeCode == "pharmacy" or typeCode == "oral" or typeCode == "dental" %}
+      {% unless subTypeCode == "pharmacy" or subTypeCode == "oral" or subTypeCode == "dental" %}
+
+        {% comment %} Resolve unique claim identifier once per EOB {% endcomment %}
+        {% assign uniqueId = "" %}
+        {% for ident in eob.identifier %}
+          {% if ident.type.coding[0].code == "uc" or ident.type.text == "uniqueclaimid" %}
+            {% assign uniqueId = ident.value %}
+            {% break %}
+          {% endif %}
+        {% endfor %}
+        {% if uniqueId == "" %}
+          {% assign uniqueId = eob.identifier[0].value %}
+        {% endif %}
+
+        {% comment %} Emit one claim object per total entry; fall back to one object if no totals {% endcomment %}
+        {% assign hasTotals = false %}
+        {% if eob.total.size > 0 %}
+          {% assign hasTotals = true %}
+        {% endif %}
+
+        {% if hasTotals %}
+          {% assign totals = eob.total %}
+        {% else %}
+          {% assign totals = "" | split: "" | push: nil %}
+        {% endif %}
+
+        {% for tot in totals %}
+
+          {% if claimComma %},{% endif %}
+          {
+            {% if uniqueId %}
+            "payerClaimUniqueIdentifier": "{{ uniqueId }}",
+            {% endif %}
+
+            {% if eob.meta.lastUpdated %}
+            "claimLastUpdateDate": "{{ eob.meta.lastUpdated }}",
+            {% endif %}
+
+            {% if eob.status %}
+              {% assign procStatus = eob.status %}
+            {% else %}
+              {% assign procStatus = eob.outcome %}
+            {% endif %}
+            {% if procStatus %}
+            "processingStatusCode": {
+              "codings": [
+                {
+                  "system": "http://hl7.org/fhir/explanationofbenefit-status",
+                  "code": "{{ procStatus }}",
+                  "display": "{{ procStatus }}"
+                }
+              ],
+              "text": "{{ procStatus }}"
+            },
+            {% endif %}
+
+            {% if eob.type %}
+            "claimTypeCode": {
+              "codings": [
+                {% assign ctComma = false %}
+                {% for coding in eob.type.coding %}
+                  {% if ctComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign ctComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ eob.type.text | default: eob.type.coding[0].display | default: eob.type.coding[0].code }}"
+            },
+            {% endif %}
+
+            {% if eob.subType %}
+            "claimSubType": {
+              "codings": [
+                {% assign cstComma = false %}
+                {% for coding in eob.subType.coding %}
+                  {% if cstComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign cstComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ eob.subType.text | default: eob.subType.coding[0].display | default: eob.subType.coding[0].code }}"
+            },
+            {% endif %}
+
+            {% if eob.use %}
+            "claimUse": {
+              "codings": [
+                {
+                  "system": "http://hl7.org/fhir/claim-use",
+                  "code": "{{ eob.use }}",
+                  "display": "{{ eob.use }}"
+                }
+              ],
+              "text": "{{ eob.use }}"
+            },
+            {% endif %}
+
+            {% if eob.billablePeriod.start %}
+            "statementFromDate": "{{ eob.billablePeriod.start }}",
+            {% endif %}
+            {% if eob.billablePeriod.end %}
+            "statementThruDate": "{{ eob.billablePeriod.end }}",
+            {% endif %}
+            {% if eob.created %}
+            "adjudicationDate": "{{ eob.created }}",
+            {% endif %}
+
+            {% if eob.insurer.identifier.value %}
+              {% assign payerId = eob.insurer.identifier.value %}
+            {% else %}
+              {% assign payerId = eob.insurer.reference %}
+            {% endif %}
+            {% if payerId %}
+            "claimPayerIdentifier": "{{ payerId }}",
+            {% endif %}
+
+            {% assign relatedClaim = eob.related | first %}
+            {% if relatedClaim.relationship %}
+            "claimAdjustedRelationship": {
+              "codings": [
+                {% assign relComma = false %}
+                {% for coding in relatedClaim.relationship.coding %}
+                  {% if relComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign relComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ relatedClaim.relationship.text | default: relatedClaim.relationship.coding[0].display | default: relatedClaim.relationship.coding[0].code }}"
+            },
+            {% endif %}
+            {% if relatedClaim.reference.value %}
+            "claimAdjustedfromIdentifier": "{{ relatedClaim.reference.value }}",
+            "claimAdjustedtoIdentifier": "{{ relatedClaim.reference.value }}",
+            {% endif %}
+
+            {% if eob.payee.type %}
+            "claimPayeeTypeCode": {
+              "codings": [
+                {% assign ptComma = false %}
+                {% for coding in eob.payee.type.coding %}
+                  {% if ptComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign ptComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ eob.payee.type.text | default: eob.payee.type.coding[0].display | default: eob.payee.type.coding[0].code }}"
+            },
+            {% endif %}
+            {% if eob.payee.party.reference %}
+            "claimPayee": "{{ eob.payee.party.reference }}",
+            {% endif %}
+
+            {% for si in eob.supportingInfo %}
+              {% assign siCode = si.category.coding[0].code %}
+
+              {% if siCode == "admissionperiod" %}
+                {% if si.timingPeriod.start %}
+                "admissionDate": "{{ si.timingPeriod.start }}",
+                {% endif %}
+                {% if si.timingPeriod.end %}
+                "dischargeDate": "{{ si.timingPeriod.end }}",
+                {% endif %}
+              {% endif %}
+
+              {% if siCode == "clmrecvddate" %}
+                {% if si.timingDate %}
+                  {% assign receivedDate = si.timingDate %}
+                {% else %}
+                  {% assign receivedDate = si.timingPeriod.start %}
+                {% endif %}
+                {% if receivedDate %}
+                "claimReceivedDate": "{{ receivedDate }}",
+                {% endif %}
+              {% endif %}
+
+              {% if siCode == "typeofbill" %}
+                {% if si.code %}
+                "billFacilityTypeCode": {
+                  "codings": [
+                    {% assign tobComma = false %}
+                    {% for coding in si.code.coding %}
+                      {% if tobComma %},{% endif %}
+                      {
+                        "system": "{{ coding.system }}",
+                        "code": "{{ coding.code }}",
+                        "display": "{{ coding.display | default: coding.code }}"
+                      }
+                      {% assign tobComma = true %}
+                    {% endfor %}
+                  ],
+                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                },
+                "frequencyCode": {
+                  "codings": [
+                    {% assign fcComma = false %}
+                    {% for coding in si.code.coding %}
+                      {% if fcComma %},{% endif %}
+                      {
+                        "system": "{{ coding.system }}",
+                        "code": "{{ coding.code }}",
+                        "display": "{{ coding.display | default: coding.code }}"
+                      }
+                      {% assign fcComma = true %}
+                    {% endfor %}
+                  ],
+                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                },
+                {% endif %}
+              {% endif %}
+
+              {% if siCode == "pointoforigin" %}
+                {% if si.code %}
+                "inpatientSourceAdmissionCode": {
+                  "codings": [
+                    {% assign poComma = false %}
+                    {% for coding in si.code.coding %}
+                      {% if poComma %},{% endif %}
+                      {
+                        "system": "{{ coding.system }}",
+                        "code": "{{ coding.code }}",
+                        "display": "{{ coding.display | default: coding.code }}"
+                      }
+                      {% assign poComma = true %}
+                    {% endfor %}
+                  ],
+                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                },
+                {% endif %}
+              {% endif %}
+
+              {% if siCode == "admtype" %}
+                {% if si.code %}
+                "inpatientAdmissionTypeCode": {
+                  "codings": [
+                    {% assign atComma = false %}
+                    {% for coding in si.code.coding %}
+                      {% if atComma %},{% endif %}
+                      {
+                        "system": "{{ coding.system }}",
+                        "code": "{{ coding.code }}",
+                        "display": "{{ coding.display | default: coding.code }}"
+                      }
+                      {% assign atComma = true %}
+                    {% endfor %}
+                  ],
+                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                },
+                {% endif %}
+              {% endif %}
+
+              {% if siCode == "discharge-status" %}
+                {% if si.code %}
+                "patientDischargeStatusCode": {
+                  "codings": [
+                    {% assign dsComma = false %}
+                    {% for coding in si.code.coding %}
+                      {% if dsComma %},{% endif %}
+                      {
+                        "system": "{{ coding.system }}",
+                        "code": "{{ coding.code }}",
+                        "display": "{{ coding.display | default: coding.code }}"
+                      }
+                      {% assign dsComma = true %}
+                    {% endfor %}
+                  ],
+                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                },
+                {% endif %}
+              {% endif %}
+
+              {% if siCode == "drg" %}
+                {% if si.code %}
+                "claimDrgVersion": "{{ si.code.coding[0].version }}",
+                "claimDrgCode": {
+                  "codings": [
+                    {% assign drgComma = false %}
+                    {% for coding in si.code.coding %}
+                      {% if drgComma %},{% endif %}
+                      {
+                        "system": "{{ coding.system }}",
+                        "code": "{{ coding.code }}",
+                        "display": "{{ coding.display | default: coding.code }}"
+                      }
+                      {% assign drgComma = true %}
+                    {% endfor %}
+                  ],
+                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                },
+                {% endif %}
+              {% endif %}
+
+              {% if siCode == "medicalrecordnumber" %}
+                {% if si.valueString %}
+                "medicalRecordNumber": "{{ si.valueString }}",
+                {% endif %}
+              {% endif %}
+
+              {% if siCode == "patientaccountnumber" %}
+                {% if si.valueString %}
+                "patientAccountNumber": "{{ si.valueString }}",
+                {% endif %}
+              {% endif %}
+
+            {% endfor %}
+
+            {% for adj in eob.adjudication %}
+              {% assign adjCode = adj.category.coding[0].code %}
+
+              {% if adjCode == "adjustmentreason" %}
+                {% if adj.reason %}
+                "paymentDenialCode": {
+                  "codings": [
+                    {% assign adjrComma = false %}
+                    {% for coding in adj.reason.coding %}
+                      {% if adjrComma %},{% endif %}
+                      {
+                        "system": "{{ coding.system }}",
+                        "code": "{{ coding.code }}",
+                        "display": "{{ coding.display | default: coding.code }}"
+                      }
+                      {% assign adjrComma = true %}
+                    {% endfor %}
+                  ],
+                  "text": "{{ adj.reason.text | default: adj.reason.coding[0].display | default: adj.reason.coding[0].code }}"
+                },
+                {% endif %}
+              {% endif %}
+
+              {% if adj.amount %}
+                {% if adjCode == "paidtoprovider"            %}"claimAmountPaidToProvider":    "{{ adj.amount.value }}",{% endif %}
+                {% if adjCode == "paidbypatient"             %}"amountPaidByPatient":          "{{ adj.amount.value }}",{% endif %}
+                {% if adjCode == "coinsuranceliabilityamount"%}"coInsuranceLiabilityAmount":   "{{ adj.amount.value }}",{% endif %}
+                {% if adjCode == "copay"                     %}"copayAmount":                  "{{ adj.amount.value }}",{% endif %}
+                {% if adjCode == "deductible"                %}"memberPaidDeductible":         "{{ adj.amount.value }}",{% endif %}
+                {% if adjCode == "memberreimbursement"       %}"memberReimbursement":          "{{ adj.amount.value }}",{% endif %}
+                {% if adjCode == "noncovered"                %}"claimNonCoveredAmount":        "{{ adj.amount.value }}",{% endif %}
+                {% if adjCode == "discount"                  %}"claimDiscountAmount":          "{{ adj.amount.value }}",{% endif %}
+                {% if adjCode == "memberliability"           %}"memberLiability":              "{{ adj.amount.value }}",{% endif %}
+                {% if adjCode == "otherpayeramount"          %}"claimOtherPayerPaidAmount":    "{{ adj.amount.value }}",{% endif %}
+              {% endif %}
+
+            {% endfor %}
+
+            {% comment %} Per-total fields: unique to this row {% endcomment %}
+            {% if tot %}
+              {% assign totCode = tot.category.coding[0].code %}
+              "adjudicationAmountType": {
+                "codings": [
+                  {% assign tatComma = false %}
+                  {% for coding in tot.category.coding %}
+                    {% if tatComma %},{% endif %}
+                    {
+                      "system": "{{ coding.system }}",
+                      "code": "{{ coding.code }}",
+                      "display": "{{ coding.display | default: coding.code }}"
+                    }
+                    {% assign tatComma = true %}
+                  {% endfor %}
+                ],
+                "text": "{{ tot.category.text | default: tot.category.coding[0].display | default: tot.category.coding[0].code }}"
+              },
+              {% if totCode == "submitted"  %}"claimTotalSubmittedAmount": "{{ tot.amount.value }}",{% endif %}
+              {% if totCode == "eligible"   %}"claimTotalAllowedAmount":   "{{ tot.amount.value }}",{% endif %}
+              {% if totCode == "benefit"    %}"claimPaymentAmount":        "{{ tot.amount.value }}",{% endif %}
+              "totalAmount": "{{ tot.amount.value }}",
+            {% endif %}
+
+            {% if eob.payment.type %}
+            "claimPaymentStatusCode": {
+              "codings": [
+                {% assign psComma = false %}
+                {% for coding in eob.payment.type.coding %}
+                  {% if psComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign psComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ eob.payment.type.text | default: eob.payment.type.coding[0].display | default: eob.payment.type.coding[0].code }}"
+            },
+            {% endif %}
+            {% if eob.payment.date %}
+            "claimPaidDate": "{{ eob.payment.date }}",
+            {% endif %}
+          }
+          {% assign claimComma = true %}
+
+        {% endfor %} {% comment %} end totals loop {% endcomment %}
+
+      {% endunless %}
+    {% endunless %}
+  {% endfor %}
+]

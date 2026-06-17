@@ -1,14 +1,14 @@
 "clinicalDocuments": [
 {% for doc in docs %}
 {
+  "documentIdentifier": "{{ doc.identifier[0].value }}",
   "effectiveDate": "{{ doc.date }}",
-  "hasAttachment": "{% if doc.content and doc.content.size > 0 %}true{% else %}false{% endif %}",
-  "documentStatus": {
-	"codings": [
-	],
-	"text": "{{ doc.status }}"
-  },
-  "documentTitle": "{{ docReference.description }}",
+  "documentPeriodStart": "{{ doc.period.start }}",
+  "documentPeriodEnd": "{{ doc.period.end }}",
+  "hasAttachment": {% if doc.content and doc.content.size > 0 %}true{% else %}false{% endif %},
+  "documentAuthorIdentifier": "{{ doc.author[0].reference }}",
+  "documentAuthorName": "{{ doc.author[0].display }}",
+  "documentTitle": "{% include 'json_escape' value: doc.description %}",
   {% if doc.type %}
   "documentType": {
 	"codings": [
@@ -18,26 +18,42 @@
 	  },
 	  {% endfor %}
 	],
-	"text": "{{ doc.type.text }}"
+	{%- assign docTypeText = doc.type.text | default: doc.type.coding[0].display | default: doc.type.coding[0].code -%}
+	"text": "{% include 'json_escape' value: docTypeText %}"
   },
   {% endif %}
-
-  {% if doc.category %}
-  "category": [
-	{% for category in doc.category %}
+  "documentFormat": {
+    "codings": [
+      {
+		{% include '_codableconcept' coding: doc.content[0].format -%}
+      }
+    ],
+    "text": "{{ doc.content[0].format.display | default: doc.content[0].format.code }}"
+  },
+  {% if doc.category[0] %}
+  "documentCategory": 
 	{
 	  "codings": [
-		{% for coding in category.coding %}
+		{% for coding in doc.category[0].coding %}
 		{
 		  {% include '_codableconcept' coding: coding -%}
 		},
 		{% endfor %}
 	  ],
-	  "text": "{{ category.text }}"
-	}{% unless forloop.last %},{% endunless %}
-	{% endfor %}
-  ],
+	  {%- assign catText = doc.category[0].text | default: doc.category[0].coding[0].display | default: doc.category[0].coding[0].code -%}
+	  "text": "{% include 'json_escape' value: catText %}"
+	},
   {% endif %}
+  "documentStatus": {
+	"codings": [
+	  {
+        "system": "http://hl7.org/fhir/ValueSet/composition-status",
+        "code": "{{ doc.status }}",
+        "display": "{{ doc.status }}"
+      }
+	],
+	"text": "{{ doc.status }}"
+  },
 },
 {% endfor %}
 ],

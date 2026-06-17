@@ -1,0 +1,116 @@
+"dentalClaim": [
+  {% assign dentComma = false %}
+  {% for eob in eobs %}
+    {% assign typeCode = eob.type.coding[0].code | downcase %}
+    {% assign subTypeCode = eob.subType.coding[0].code | downcase %}
+    {% if typeCode == "oral" or subTypeCode == "dental" or subTypeCode == "oral" %}
+
+      {% for item in eob.item %}
+        {% if dentComma %},{% endif %}
+        {
+          {% assign missingToothFirst = true %}
+          {% for si in eob.supportingInfo %}
+            {% assign siCode = si.category.coding[0].code %}
+
+            {% if siCode == "orthodontic" or siCode == "orthoind" %}
+            "orthodonticsTreatmentIndicator": "{{ si.valueBoolean | default: si.valueString }}",
+            {% endif %}
+
+            {% if siCode == "orthodonticappdate" or siCode == "orthoappdate" %}
+            {% if si.timingDate %}"orthodonticsApplianceApplicationDate": "{{ si.timingDate }}",
+            {% elsif si.valueDate %}"orthodonticsApplianceApplicationDate": "{{ si.valueDate }}",{% endif %}
+            {% endif %}
+
+            {% if siCode == "totalmonthsortho" or siCode == "orthomonths" %}
+            "totalNumberOfMonthsForOrthodontia": "{{ si.valueQuantity.value | default: si.valueInteger | default: si.valueString }}",
+            {% endif %}
+
+            {% if siCode == "prosthesisreplacement" or siCode == "prosthrepind" %}
+            "prosthesisReplacementIndicator": "{{ si.valueBoolean | default: si.valueString }}",
+            {% endif %}
+
+            {% if siCode == "priorprosthesisdate" or siCode == "priorprosthdate" %}
+            {% if si.timingDate %}"dateOfPriorProsthesisPlacement": "{{ si.timingDate }}",
+            {% elsif si.valueDate %}"dateOfPriorProsthesisPlacement": "{{ si.valueDate }}",{% endif %}
+            {% endif %}
+
+            {% if siCode == "missingtooth" or siCode == "missingtoothno" %}
+              {% if missingToothFirst %}
+              "missingToothNumberFirstOccurrence": {
+                "codings": [{ "system": "http://terminology.hl7.org/CodeSystem/ex-tooth", "code": "{{ si.valueInteger | default: si.valueString }}", "display": "Tooth {{ si.valueInteger | default: si.valueString }}" }],
+                "text": "{{ si.valueInteger | default: si.valueString }}"
+              },
+              {% assign missingToothFirst = false %}
+              {% else %}
+              "missingToothNumberAfterFirstOccurrence": {
+                "codings": [{ "system": "http://terminology.hl7.org/CodeSystem/ex-tooth", "code": "{{ si.valueInteger | default: si.valueString }}", "display": "Tooth {{ si.valueInteger | default: si.valueString }}" }],
+                "text": "{{ si.valueInteger | default: si.valueString }}"
+              },
+              {% endif %}
+            {% endif %}
+
+          {% endfor %}
+
+          {% if item.productOrService %}
+          "procedureCode": {
+            "codings": [
+              {% assign dpcComma = false %}
+              {% for coding in item.productOrService.coding %}
+                {% if dpcComma %},{% endif %}
+                { "system": "{{ coding.system }}", "code": "{{ coding.code }}", "display": "{{ coding.display | default: coding.code }}" }
+                {% assign dpcComma = true %}
+              {% endfor %}
+            ],
+            "text": "{{ item.productOrService.text | default: item.productOrService.coding[0].display | default: item.productOrService.coding[0].code }}"
+          },
+          {% endif %}
+
+          {% if item.modifier[0] %}
+          "procedureModifierCode": {
+            "codings": [
+              {% assign dpmComma = false %}
+              {% for coding in item.modifier[0].coding %}
+                {% if dpmComma %},{% endif %}
+                { "system": "{{ coding.system }}", "code": "{{ coding.code }}", "display": "{{ coding.display | default: coding.code }}" }
+                {% assign dpmComma = true %}
+              {% endfor %}
+            ],
+            "text": "{{ item.modifier[0].text | default: item.modifier[0].coding[0].display | default: item.modifier[0].coding[0].code }}"
+          },
+          {% endif %}
+
+          {% if item.bodySite %}
+          "toothNumberFirstOccurrence": {
+            "codings": [
+              {% assign t1Comma = false %}
+              {% for coding in item.bodySite.coding %}
+                {% if t1Comma %},{% endif %}
+                { "system": "{{ coding.system }}", "code": "{{ coding.code }}", "display": "{{ coding.display | default: coding.code }}" }
+                {% assign t1Comma = true %}
+              {% endfor %}
+            ],
+            "text": "{{ item.bodySite.text | default: item.bodySite.coding[0].display | default: item.bodySite.coding[0].code }}"
+          },
+          {% endif %}
+
+          {% assign toothSurface = item.subSite | first %}
+          {% if toothSurface %}
+          "toothSurface": {
+            "codings": [
+              {% assign tsComma = false %}
+              {% for coding in toothSurface.coding %}
+                {% if tsComma %},{% endif %}
+                { "system": "{{ coding.system }}", "code": "{{ coding.code }}", "display": "{{ coding.display | default: coding.code }}" }
+                {% assign tsComma = true %}
+              {% endfor %}
+            ],
+            "text": "{{ toothSurface.text | default: toothSurface.coding[0].display | default: toothSurface.coding[0].code }}"
+          },
+          {% endif %}
+        }
+        {% assign dentComma = true %}
+      {% endfor %}
+
+    {% endif %}
+  {% endfor %}
+]

@@ -7,25 +7,61 @@
   "encounterDateTime": "{{ encounter.period.start }}",
   "encounterDisposition": "{% if encounter.hospitalization and encounter.hospitalization.dischargeDisposition and encounter.hospitalization.dischargeDisposition.text %}{{ encounter.hospitalization.dischargeDisposition.text }}{% endif %}",
   "encounterIdentifier": "{% if encounter.identifier and encounter.identifier.size > 0 %}{{ encounter.identifier.first.value }}{% endif %}",
-  "encounterLocation": "{% if encounter.location and encounter.location.size > 0 %}{{ encounter.location.first.location.display }}{% endif %}",
+  "encounterIdentifierNamespace": "{% if encounter.identifier and encounter.identifier.size > 0 %}{{ encounter.identifier.first.system }}{% endif %}",
+      
+  "encounterLocation": "{% if encounter.location and encounter.location.size > 0 %}{{ encounter.location.first.location.display | default: encounter.location.first.location.reference }}{% endif %}",
 
-  {% if encounter.type and encounter.type.size > 0 %}
-    {% if encounter.type[0].text %}
-      "encounterType": "{{ encounter.type[0].text | strip }}",
-    {% elsif encounter.type[0].coding and encounter.type[0].coding.size > 0 and encounter.type[0].coding[0].display %}
-      "encounterType": "{{ encounter.type[0].coding[0].display | strip }}",
-    {% endif %}
-  {% endif %}
+  "encounterType": {
+    "codings": [
+      {% for coding in encounter.type[0].coding %}
+        {
+          {% include '_codableconcept' coding: coding -%}
+        }{% unless forloop.last %},{% endunless %}
+      {% endfor %}
+    ],
+    "text": "{{ encounter.type[0].text | default: encounter.type[0].coding[0].display | default: encounter.type[0].coding[0].code }}"
+  },
 
-  "encounterStatus": "{{ encounter.status }}",
+  "encounterStatus": {
+    "codings": [
+      {
+        "system": "http://hl7.org/fhir/ValueSet/encounter-status",
+        "code": "{% include 'json_escape' value: encounter.status %}",
+        "display": "{% include 'json_escape' value: encounter.status %}"
+      }
+    ],
+    "text": "{% include 'json_escape' value: encounter.status %}"
+  },
 
   {% if encounter.class and encounter.class.display %}
   "class": "{{ encounter.class.display }}",
   {% endif %}
 
+  "encounterClass": { 
+    {% if encounter.class[0] %}
+      {% for coding in encounter.class[0].coding %}
+        "codings": [
+          {
+            {% include '_codableconcept' coding: coding -%}
+          },
+        ],
+        {% assign textValue = encounter.class[0].text | default: encounter.class[0].coding[0].display | default: encounter.class[0].coding[0].code  %}
+        "text": "{% include 'json_escape' value: textValue %}"
+      {% endfor %}
+    {% elsif encounter.class %}
+      "codings": [
+        {
+          {% include '_codableconcept' coding: encounter.class -%}
+        },
+      ],
+      {% assign textValue = default: encounter.class.display | default: encounter.class.code  %}
+      "text": "{% include 'json_escape' value: textValue %}"
+    {% endif %}
+  },
+
   {% if encounter.period.start %}
     "encounterStartDatetime": "{{ encounter.period.start }}",
-  {% endif %}
+  {% endif %} 
 
   {% if encounter.period.end %}
     "encounterEndDatetime": "{{ encounter.period.end }}",
@@ -41,7 +77,8 @@
     },
     {% endfor %}
     ],
-    "text": "{{ diag.use.text | default: diag.use.coding[0].display }}"
+    {% assign textValue = diag.use.text | default: diag.use.coding[0].display | default: diag.use.coding[0].code  %}
+    "text": "{% include 'json_escape' value: textValue %}"
   },
   {% else %}
   {% assign condFound = false %}
@@ -57,7 +94,8 @@
             },
             {% endfor %}
           ],
-          "text": "{{ cond.code.text | default: cond.code.coding[0].display }}"
+          {% assign textValue = cond.code.text | default: cond.code.coding[0].display | default: cond.code.coding[0].code  %}
+          "text": "{% include 'json_escape' value: textValue %}"
         },
         {% assign condFound = true %}
   {% endif %}
@@ -76,7 +114,8 @@
         {% endfor %}
       {% endfor %}
     ],
-    "text": "{{ encounter.reasonCode[0].text | default: encounter.reasonCode[0].coding[0].display }}"
+     {% assign textValue = encounter.reasonCode[0].text | default: encounter.reasonCode[0].coding[0].display | default: encounter.reasonCode[0].coding[0].code  %}
+    "text": "{% include 'json_escape' value: textValue %}"
   },
   {% endif %}
 },

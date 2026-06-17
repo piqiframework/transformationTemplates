@@ -2,13 +2,10 @@
  
     {% for specimen in specimens %}
       {% assign specID = specimen.id %}
-
-      {% assign specRef1 = "Specimen/" | append: specId %}
-      {% assign specRef2 = "urn:uuid:" | append: spedId %}
-
-	  {% if specimenReference == specRef1 or specimenReference == specRef2 %}
+      {% assign specRef1 = "Specimen/" | append: specID %}
+      {% assign specRef2 = "urn:uuid:" | append: specID %}
+	  {% if specimenReference == specRef1 or specimenReference == specRef2 or specimenReference == specID %}
         {% if specFound == false %}
-
 		  {% if specimen.type %}
 			"specimenType": {
 			  "codings": [
@@ -18,40 +15,50 @@
 				  }{% unless forloop.last %},{% endunless %}
 				{% endfor %}
 			  ],
-			  "text": "{{ specimen.type.text }}"
+			  {% assign typeText = specimen.type.text | default: specimen.type.coding[0].display | default: specimen.type.coding[0].code %}
+			  "text": "{{ typeText }}"
 			},
 		  {% endif %}
-
 		  {% if specimen.id %}
 			"specimenIdentifier": "{{ specID }}",
 		  {% endif %}
-
 		  {% if specimen.status %}
-			"specimenStatus": "{{ specimen.status }}",
+			"specimenStatus": "{{ specimen.status | capitalize }}",
 		  {% endif %}
-
-		  {% if specimen.collected %}
-			"specimenCollectionDateTime": "{{ specimen.collected.collectedDateTime }}",
+		  {% assign collectionDate = specimen.collection.collectedDateTime | default: specimen.collection.collectedPeriod.start %}
+		  {% if collectionDate %}
+			"specimenCollectionDateTime": "{{ collectionDate }}",
 		  {% endif %}
-
 		  {% if specimen.receivedTime %}
 			"specimenReceivedTime": "{{ specimen.receivedTime }}",
 		  {% endif %}
-
-
-		  {% if specimen.condition %}
+		  {% if specimen.condition and specimen.condition.size > 0 %}
+		    {% assign firstCondition = specimen.condition[0] %}
 			"specimenCondition": {
 			  "codings": [
-				{% for coding in specimen.condition.coding %}
+				{% for coding in firstCondition.coding %}
 				  {
 					{% include '_codableconcept' coding: coding -%}
-				  },
+				  }{% unless forloop.last %},{% endunless %}
 				{% endfor %}
 			  ],
-			  "text": "{{ specimen.condition.text |  default: specimen.condition.coding[0].display }}"
+			  {% assign conditionText = firstCondition.text | default: firstCondition.coding[0].display | default: firstCondition.coding[0].code %}
+              "text": "{% include 'json_escape' value: conditionText %}"
 			},
 		  {% endif %}
-
+		  {% if specimen.collection.bodySite %}
+			"specimenSourceSite": {
+			  "codings": [
+				{% for coding in specimen.collection.bodySite.coding %}
+				  {
+					{% include '_codableconcept' coding: coding -%}
+				  }{% unless forloop.last %},{% endunless %}
+				{% endfor %}
+			  ],
+			  {% assign bodySiteText = specimen.collection.bodySite.text | default: specimen.collection.bodySite.coding[0].display | default: specimen.collection.bodySite.coding[0].code %}
+              "text": "{% include 'json_escape' value: bodySiteText %}"
+			},
+		  {% endif %}
           {% assign specFound = true %}
         {% endif %}
       {% endif %}

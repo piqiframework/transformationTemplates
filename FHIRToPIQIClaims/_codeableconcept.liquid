@@ -1,0 +1,17 @@
+{% if cc %}
+"{{ field }}": {
+  "codings": [
+    {% assign ccComma = false %}
+    {% for coding in cc.coding %}
+      {% if ccComma %},{% endif %}
+      {
+        {% if coding.system %}"system": "{{ coding.system }}",{% endif %}
+        {% if coding.code %}"code": "{{ coding.code }}",{% endif %}
+        "display": "{{ coding.display | default: coding.code }}"
+      }
+      {% assign ccComma = true %}
+    {% endfor %}
+  ],
+  "text": "{{ cc.text | default: cc.coding[0].display | default: cc.coding[0].code }}"
+}
+{% endif %}

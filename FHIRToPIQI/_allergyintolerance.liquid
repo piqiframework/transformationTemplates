@@ -2,13 +2,20 @@
 {% for allergy in allergies %}
 {% assign allergyId = allergy.id %}
 {% assign allergyCategory = allergy.category[0] %}
-{% assign allergyEffectiveDate = allergy.recordedDate | default: allergy.onsetDateTime %}
+{%- assign allergyEffectiveDate = allergy.recordedDate | default: allergy.onsetDateTime | default: allergy.onsetPeriod.start -%}
 {% if allergy.reaction %}
 {% for reaction in allergy.reaction %}
 {% assign reactionCode = reaction.manifestation[0] %}
 {% assign reactionSeverity = reaction.severity %}
 {
   "category": {
+    "codings": [
+      {
+        "system": "http://hl7.org/fhir/ValueSet/allergy-intolerance-category",
+        "code": "{{ allergyCategory }}",
+        "display": "{{ allergyCategory }}"      
+      }
+    ],
 	"text": "{{ allergyCategory }}"
   },
   "effectiveDate": "{{ allergyEffectiveDate }}",
@@ -20,10 +27,44 @@
 	  },
 	  {% endfor %}
 	],
-	"text": "{{ reactionCode.text }}"
+	{% assign textValue = reactionCode.text | default: reactionCode.coding[0].display | default: reactionCode.coding[0].code %}
+	"text": "{% include 'json_escape' value: textValue %}"
   },
   "severity": {
+    "codings": [
+      {
+        "system": "http://hl7.org/fhir/ValueSet/reaction-event-severity",
+        "code": "{{ reactionSeverity }}",
+        "display": "{{ reactionSeverity }}"      
+      }
+    ],
 	"text": "{{ reactionSeverity }}"
+  },
+  "clinicalStatus": {
+    {% if allergy.clinicalStatus and allergy.clinicalStatus.coding %}
+	"codings": [
+	  {% for coding in allergy.clinicalStatus.coding %}
+	  {
+		{% include '_codableconcept' coding: coding -%}
+	  },
+	  {% endfor %}
+	],
+	{% assign statusTextValue = allergy.clinicalStatus.text | default: allergy.clinicalStatus.coding[0].display | default: allergy.clinicalStatus.coding[0].code  %}
+	"text": "{% include 'json_escape' value: statusTextValue %}"
+	{% endif %}
+  },
+  "verificationStatus": {
+    {% if allergy.verificationStatus and allergy.verificationStatus.coding %}
+	"codings": [
+	  {% for coding in allergy.verificationStatus.coding %}
+	  {
+		{% include '_codableconcept' coding: coding -%}
+	  },
+	  {% endfor %}
+	],
+	{% assign textValue = allergy.verificationStatus.text | default: allergy.verificationStatus.coding[0].display | default: allergy.verificationStatus.coding[0].code  %}
+	"text": "{% include 'json_escape' value: textValue %}"
+    {% endif %}
   },
   "substance": {
 	"codings": [
@@ -33,18 +74,59 @@
 	  },
 	  {% endfor %}
 	],
-	"text": "{{ allergy.code.text }}"
-  }
+	{% assign textValue = allergy.code.text | default: allergy.code.coding[0].display | default: allergy.code.coding[0].code  %}
+	"text": "{% include 'json_escape' value: textValue %}"
+  },
 },
 {% endfor %}
 {% else %}
 {
   "category": {
+    "codings": [
+      {
+        "system": "http://hl7.org/fhir/ValueSet/allergy-intolerance-category",
+        "code": "{{ allergyCategory }}",
+        "display": "{{ allergyCategory }}"      
+      }
+    ],
 	"text": "{{ allergyCategory }}"
   },
   "effectiveDate": "{{ allergyEffectiveDate }}",
   "severity": {
+    "codings": [
+      {
+        "system": "http://hl7.org/fhir/ValueSet/allergy-intolerance-criticality",
+        "code": "{{ allergy.criticality }}",
+        "display": "{{ allergy.criticality }}"      
+      }
+    ],
 	"text": "{{ allergy.criticality }}"
+  },
+  "clinicalStatus": {
+    {% if allergy.clinicalStatus and allergy.clinicalStatus.coding %}
+	"codings": [
+	  {% for coding in allergy.clinicalStatus.coding %}
+	  {
+		{% include '_codableconcept' coding: coding -%}
+	  },
+	  {% endfor %}
+	],
+	{% assign statusTextValue = allergy.clinicalStatus.text | default: allergy.clinicalStatus.coding[0].display | default: allergy.clinicalStatus.coding[0].code  %}
+	"text": "{% include 'json_escape' value: statusTextValue %}"
+	{% endif %}
+  },
+  "verificationStatus": {
+    {% if allergy.verificationStatus and allergy.verificationStatus.coding %}
+	"codings": [
+	  {% for coding in allergy.verificationStatus.coding %}
+	  {
+		{% include '_codableconcept' coding: coding -%}
+	  },
+	  {% endfor %}
+	],
+	{% assign textValue = allergy.verificationStatus.text | default: allergy.verificationStatus.coding[0].display | default: allergy.verificationStatus.coding[0].code  %}
+	"text": "{% include 'json_escape' value: textValue %}"
+	{% endif %}
   },
   "substance": {
 	"codings": [
@@ -54,8 +136,9 @@
 	  },
 	  {% endfor %}
 	],
-	"text": "{{ allergy.code.text }}"
-  }
+    {% assign textValue = allergy.code.text | default:  allergy.code.coding[0].display | default: allergy.code.coding[0].code %}
+	"text": "{% include 'json_escape' value: textValue %}"
+  },
 },
 {% endif %}
 {% endfor %}

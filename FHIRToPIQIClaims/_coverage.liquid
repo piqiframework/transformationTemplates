@@ -1,0 +1,156 @@
+"coverage": [
+  {% assign covComma = false %}
+  {% for eob in eobs %}
+    {% for ins in eob.insurance %}
+
+      {% comment %} Resolve Coverage resource — handle urn:uuid:, Coverage/, #, and bare id formats {% endcomment %}
+      {% comment %} Check contained resources first, then bundle-level coverages {% endcomment %}
+      {% assign covRef = ins.coverage.reference %}
+      {% assign covResource = nil %}
+      {% assign covContained = eob.contained | where: "resourceType", "Coverage" %}
+      {% for cov in covContained %}
+        {% assign cov1 = "Coverage/" | append: cov.id %}
+        {% assign cov2 = "urn:uuid:" | append: cov.id %}
+        {% assign cov3 = "#" | append: cov.id %}
+        {% if cov.id == covRef or cov1 == covRef or cov2 == covRef or cov3 == covRef %}
+          {% assign covResource = cov %}
+          {% break %}
+        {% endif %}
+      {% endfor %}
+      {% unless covResource %}
+        {% for cov in coverages %}
+          {% assign cov1 = "Coverage/" | append: cov.id %}
+          {% assign cov2 = "urn:uuid:" | append: cov.id %}
+          {% assign cov3 = "#" | append: cov.id %}
+          {% if cov.id == covRef or cov1 == covRef or cov2 == covRef or cov3 == covRef %}
+            {% assign covResource = cov %}
+            {% break %}
+          {% endif %}
+        {% endfor %}
+      {% endunless %}
+
+      {% if covComma %},{% endif %}
+      {
+        {% comment %} COVER_STATUS: EOB.insurance.focal {% endcomment %}
+        "coverageStatus": {
+          "codings": [
+            {
+              "system": "http://hl7.org/fhir/coverage-status",
+              "code": "{% if ins.focal %}active{% else %}inactive{% endif %}",
+              "display": "{% if ins.focal %}Active{% else %}Inactive{% endif %}"
+            }
+          ],
+          "text": "{% if ins.focal %}Active{% else %}Inactive{% endif %}"
+        },
+
+        {% if covResource %}
+
+          {% comment %} COVER_PLANID / COVER_GROUPID / COVER_GROUPNAME / COVER_PLANNAME from Coverage.class {% endcomment %}
+          {% for cls in covResource.class %}
+            {% if cls.type.coding[0].code == "plan" %}
+            "planIdentifier": "{{ cls.value }}",
+            "planName": "{{ cls.name }}",
+            {% endif %}
+            {% if cls.type.coding[0].code == "group" %}
+            "groupId": "{{ cls.value }}",
+            "groupName": "{{ cls.name }}",
+            {% endif %}
+          {% endfor %}
+
+          {% comment %} COVER_TYPE {% endcomment %}
+          {% if covResource.type %}
+          "coverageType": {
+            "codings": [
+              {% assign ctComma = false %}
+              {% for coding in covResource.type.coding %}
+                {% if ctComma %},{% endif %}
+                {
+                  "system": "{{ coding.system }}",
+                  "code": "{{ coding.code }}",
+                  "display": "{{ coding.display | default: coding.code }}"
+                }
+                {% assign ctComma = true %}
+              {% endfor %}
+            ],
+            "text": "{{ covResource.type.text | default: covResource.type.coding[0].display | default: covResource.type.coding[0].code }}"
+          },
+          {% endif %}
+
+          {% comment %} COVER_STARTDATE / COVER_ENDDATE {% endcomment %}
+          {% if covResource.period.start %}
+          "startDate": "{{ covResource.period.start }}",
+          {% endif %}
+          {% if covResource.period.end %}
+          "endDate": "{{ covResource.period.end }}",
+          {% endif %}
+
+          {% comment %} COVER_SUBID {% endcomment %}
+          {% if covResource.subscriberId %}
+          "subscriberId": "{{ covResource.subscriberId }}",
+          {% endif %}
+
+          {% comment %} COVER_RELATION {% endcomment %}
+          {% if covResource.relationship %}
+          "relationshipToSubscriber": {
+            "codings": [
+              {% assign relComma = false %}
+              {% for coding in covResource.relationship.coding %}
+                {% if relComma %},{% endif %}
+                {
+                  "system": "{{ coding.system }}",
+                  "code": "{{ coding.code }}",
+                  "display": "{{ coding.display | default: coding.code }}"
+                }
+                {% assign relComma = true %}
+              {% endfor %}
+            ],
+            "text": "{{ covResource.relationship.text | default: covResource.relationship.coding[0].display | default: covResource.relationship.coding[0].code }}"
+          },
+          {% endif %}
+
+          {% comment %} COVER_PAYERID: prefer payor identifier.value, fallback to EOB.insurer.identifier.value {% endcomment %}
+          {% if covResource.payor[0].identifier.value %}
+            {% assign payerIdVal = covResource.payor[0].identifier.value %}
+          {% elsif eob.insurer.identifier.value %}
+            {% assign payerIdVal = eob.insurer.identifier.value %}
+          {% else %}
+            {% assign payerIdVal = "" %}
+          {% endif %}
+          {% if payerIdVal != "" %}
+          "payerIdentifier": "{{ payerIdVal }}",
+          {% endif %}
+
+          {% comment %} COVER_PAYERNAME: prefer payor display, fallback to EOB.insurer.display {% endcomment %}
+          {% if covResource.payor[0].display %}
+            {% assign payerName = covResource.payor[0].display %}
+          {% else %}
+            {% assign payerName = eob.insurer.display %}
+          {% endif %}
+          {% if payerName %}
+          "claimPayerName": "{{ payerName }}",
+          {% endif %}
+
+          {% comment %} COVER_OTHERPAYER {% endcomment %}
+          {% if covResource.payor[1] %}
+            {% if covResource.payor[1].display %}
+            "otherPayerName": "{{ covResource.payor[1].display }}",
+            {% endif %}
+          {% endif %}
+
+        {% else %}
+          {% comment %} Coverage resource not found — fallback to EOB.insurer {% endcomment %}
+          {% if eob.insurer.identifier.value %}
+          "payerIdentifier": "{{ eob.insurer.identifier.value }}",
+          {% endif %}
+          {% if eob.insurer.display %}
+          "claimPayerName": "{{ eob.insurer.display }}",
+          {% endif %}
+          {% if ins.coverage.reference %}
+          "planIdentifier": "{{ ins.coverage.reference }}",
+          {% endif %}
+        {% endif %}
+      }
+      {% assign covComma = true %}
+    {% endfor %}
+  {% endfor %}
+]

@@ -1,41 +1,112 @@
 "healthAssessments":[
 {% for entry in observations %}
-{% if entry.category[0].coding[0].code != "laboratory" and entry.category[0].coding[0].code != "vital-signs" -%}
-{
-  "assessment": {
-    "codings": [
-      {% for coding in entry.code.coding %}
-      {
-        {% include '_codableconcept' coding: coding -%}
+  {% if entry.category[0].coding[0].code != "laboratory" and entry.category[0].coding[0].code != "vital-signs" and entry.category[0].coding[0].code != "exam"-%}
+    {
+      "assessment": {
+        "codings": [
+          {% for coding in entry.code.coding %}
+            {
+              {% include '_codableconcept' coding: coding -%}
+            },
+          {% endfor %}
+        ],
+        {% assign textValue = entry.code.text | default: entry.code.coding[0].display %}
+        "text": "{% include 'json_escape' value: textValue %}"
       },
-      {% endfor %}
-    ],
-    "text": "{{ entry.code.text | default: entry.code.coding[0].display }}"
-  },
-  "issuedDateTime": "{{ entry.issued }}",
-  "effectiveDate": "{{ entry.effectiveDateTime }}",
-  {% include '_resultValue' component: entry -%}
-},
-{% if entry.component %}
-{% for component in entry.component %}
-  {
-    "assessment": {
-      "codings": [
-        {% for coding in component.code.coding %}
-        {
-          {% include '_codableconcept' coding: coding -%}
-        },
+      "issuedDateTime": "{{ entry.issued }}",
+      "effectiveDate": "{{ entry.effectiveDateTime | default: entry.effectivePeriod.start }}",
+      {% assign targetRef = entry.derivedFrom[0].reference | remove: 'urn:uuid:' | remove: 'QuestionnaireResponse/'%}
+      {% if targetRef %}
+        {% for questionnaireResponse in questionnaireResponses %}
+          {% if questionnaireResponse.id == targetRef %}
+            "questionnaireURL": "{{ questionnaireResponse.questionnaire }}",
+            {% break %}
+          {% endif %}
         {% endfor %}
-      ],
-      "text": "{{ component.code.text }}"
-    },
-    "issuedDateTime": "{{ entry.issued }}",
-	"effectiveDate": "{{ entry.effectiveDateTime }}",
-	{% include '_resultValue' component: component -%}
-  },
-{% endfor %}
-{% endif %}
+      {% endif %}
+      {%- assign performerId =  entry.performer[0].identifier.value | default: entry.performer[0].reference -%}
+      "performerIdentifier": "{% include 'json_escape' value: performerId %}",
+      "performerName": "{{ entry.performer[0].display }}",
+      "assessmentStatus": {
+        "codings": [
+          {
+            "system": "http://hl7.org/fhir/ValueSet/observation-status",
+            "code": "{% include 'json_escape' value: entry.status %}",
+            "display": "{% include 'json_escape' value: entry.status %}"
+          }
+        ],
+        "text": "{% include 'json_escape' value: entry.status %}"
+      },
+      "category": {
+        "codings": [
+          {% for coding in entry.category[0].coding %}
+            {
+              {% include '_codableconcept' coding: coding -%}
+            },
+          {% endfor %}
+        ],
+        {%- assign categoryText =  entry.category[0].text | default: entry.category[0].coding[0].display | default: entry.category[0].coding[0].code -%}
+        "text": "{% include 'json_escape' value: categoryText %}"
+      },
 
-{% endif %}
+      {% include '_resultValue' component: entry -%}
+    },
+
+    {% if entry.component %}
+      {% for component in entry.component %}
+        {
+          "assessment": {
+            "codings": [
+              {% for coding in component.code.coding %}
+                {
+                  {% include '_codableconcept' coding: coding -%}
+                },
+              {% endfor %}
+            ],
+            {%- assign componentText = component.code.text | default: component.code.coding[0].display | default: component.code.coding[0].code -%}
+            "text": "{% include 'json_escape' value: componentText %}"
+          },
+          "issuedDateTime": "{{ entry.issued }}",
+	      "effectiveDate": "{{ entry.effectiveDateTime | default: entry.effectivePeriod.start}}",
+          {% assign targetRef = entry.derivedFrom[0].reference | remove: 'urn:uuid:' | remove: 'QuestionnaireResponse/'%}
+          {% if targetRef %}
+            {% for questionnaireResponse in questionnaireResponses %}
+              {% if questionnaireResponse.id == targetRef %}
+                "questionnaireURL": "{{ questionnaireResponse.questionnaire }}",
+                {% break %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          {%- assign performerId =  entry.performer[0].identifier.value | default: entry.performer[0].reference -%}
+          "performerIdentifier": "{% include 'json_escape' value: performerId %}",
+          "performerName": "{{ entry.performer[0].display }}",
+          "assessmentStatus": {
+            "codings": [
+              {
+                "system": "http://hl7.org/fhir/ValueSet/observation-status",
+                "code": "{% include 'json_escape' value: entry.status %}",
+                "display": "{% include 'json_escape' value: entry.status %}"
+              }
+            ],
+            "text": "{% include 'json_escape' value: entry.status %}"
+          },
+          "category": {
+            "codings": [
+              {% for coding in entry.category[0].coding %}
+                {
+                  {% include '_codableconcept' coding: coding -%}
+                },
+              {% endfor %}
+            ],
+             {%- assign categoryText =  entry.category[0].text | default: entry.category[0].coding[0].display | default: entry.category[0].coding[0].code -%}
+            "text": "{% include 'json_escape' value: categoryText %}"
+          },
+
+	      {% include '_resultValue' component: component -%}
+        },
+      {% endfor %}
+    {% endif %}
+
+  {% endif %}
 {% endfor %}
 ],

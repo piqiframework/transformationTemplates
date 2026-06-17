@@ -11,10 +11,23 @@
         {% endfor %}
       ],
       {% endif %}
-      "text": "{{ proc.code.text }}"
+      "text": "{% include 'json_escape' value: proc.code.text %}"
     },
 
     "procedureDateTime": "{% if proc.performedDateTime %}{{ proc.performedDateTime }}{% elsif proc.performedPeriod.start %}{{ proc.performedPeriod.start }}{% endif %}",
+    "procedurePerformedDate": "{% if proc.performedDateTime %}{{ proc.performedDateTime }}{% elsif proc.performedPeriod.start %}{{ proc.performedPeriod.start }}{% endif %}",
+    {% if proc.status %}
+    "procedureStatus": {
+      "codings": [
+        {
+          "system": "http://hl7.org/fhir/event-status",
+          "code": "{{ proc.status }}",
+          "display": "{{ proc.status | capitalize }}"
+        }
+      ],
+      "text": "{{ proc.status | capitalize }}"
+    },
+    {% endif %}
 
     "procedureReason": {
       {% if proc.reasonCode[0].coding %}
@@ -26,7 +39,7 @@
         {% endfor %}
       ],
       {% endif %}
-      "text": "{{ proc.reasonCode[0].text }}"
+      "text":  "{% include 'json_escape' value: proc.reasonCode[0].text %}"
     }
 },
 {% endfor %}

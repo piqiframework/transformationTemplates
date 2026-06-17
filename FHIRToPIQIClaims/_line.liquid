@@ -1,0 +1,217 @@
+"claimServiceLine":[
+{% assign lineComma = false %}
+  {% for eob in eobs %}
+    {% for item in eob.item %}
+      {% if lineComma %},{% endif %}
+      {
+        {% comment %} LINE_NUMBER: EOB.item.sequence {% endcomment %}
+        "lineNumber": "{{ item.sequence }}",
+
+        {% comment %} LINE_REVENUE_CENTER_CODE: EOB.item.revenue (CodeableConcept) {% endcomment %}
+        {% if item.revenue %}
+        "revenueCenterCode": {
+          "codings": [
+            {% assign rccComma = false %}
+            {% for coding in item.revenue.coding %}
+              {% if rccComma %},{% endif %}
+              {
+                "system": "{{ coding.system }}",
+                "code": "{{ coding.code }}",
+                "display": "{{ coding.display | default: coding.code }}"
+              }
+              {% assign rccComma = true %}
+            {% endfor %}
+          ],
+          "text": "{{ item.revenue.text | default: item.revenue.coding[0].display | default: item.revenue.coding[0].code }}"
+        },
+        {% endif %}
+
+        {% comment %} LINE_PROCEDURE_CODE (fall-through LINE_TYPE_OF_SERVICE): EOB.item.productOrService {% endcomment %}
+        {% if item.productOrService %}
+        "lineProcedureCode": {
+          "codings": [
+            {% assign lpcComma = false %}
+            {% for coding in item.productOrService.coding %}
+              {% if lpcComma %},{% endif %}
+              {
+                "system": "{{ coding.system }}",
+                "code": "{{ coding.code }}",
+                "display": "{{ coding.display | default: coding.code }}"
+              }
+              {% assign lpcComma = true %}
+            {% endfor %}
+          ],
+          "text": "{{ item.productOrService.text | default: item.productOrService.coding[0].display | default: item.productOrService.coding[0].code }}"
+        },
+        "typeOfService": {
+          "codings": [
+            {% assign tosComma = false %}
+            {% for coding in item.productOrService.coding %}
+              {% if tosComma %},{% endif %}
+              {
+                "system": "{{ coding.system }}",
+                "code": "{{ coding.code }}",
+                "display": "{{ coding.display | default: coding.code }}"
+              }
+              {% assign tosComma = true %}
+            {% endfor %}
+          ],
+          "text": "{{ item.productOrService.text | default: item.productOrService.coding[0].display | default: item.productOrService.coding[0].code }}"
+        },
+        {% endif %}
+
+        {% comment %} LINE_PROCEDURE_CODE_MOD (fall-through PROC_MOD_CODE_1..4): EOB.item.modifier[0] {% endcomment %}
+        {% if item.modifier[0] %}
+        "lineProcedureCodeModifier": {
+          "codings": [
+            {% assign lpmComma = false %}
+            {% for coding in item.modifier[0].coding %}
+              {% if lpmComma %},{% endif %}
+              {
+                "system": "{{ coding.system }}",
+                "code": "{{ coding.code }}",
+                "display": "{{ coding.display | default: coding.code }}"
+              }
+              {% assign lpmComma = true %}
+            {% endfor %}
+          ],
+          "text": "{{ item.modifier[0].text | default: item.modifier[0].coding[0].display | default: item.modifier[0].coding[0].code }}"
+        },
+        {% endif %}
+
+        {% comment %} LINE_ALLOWED_UNITS: prefer allowedunits adjudication slice, fall back to quantity — emit once {% endcomment %}
+        {% assign allowedUnitsVal = "" %}
+        {% for adj in item.adjudication %}
+          {% if adj.category.coding[0].code == "allowedunits" and adj.value %}
+            {% assign allowedUnitsVal = adj.value %}
+            {% break %}
+          {% endif %}
+        {% endfor %}
+        {% if allowedUnitsVal == "" and item.quantity.value %}
+          {% assign allowedUnitsVal = item.quantity.value %}
+        {% endif %}
+        {% if allowedUnitsVal != "" %}
+        "allowedNumberOfUnits": "{{ allowedUnitsVal }}",
+        {% endif %}
+
+        {% comment %} Item-level adjudication amounts — iterate slices {% endcomment %}
+        {% for adj in item.adjudication %}
+          {% assign adjCode = adj.category.coding[0].code %}
+
+          {% comment %} LINE_PAYMENT_DENIAL_CODE: adjustmentreason slice {% endcomment %}
+          {% if adjCode == "adjustmentreason" %}
+            {% if adj.reason %}
+            "linePaymentDenialCode": {
+              "codings": [
+                {% assign lpdrComma = false %}
+                {% for coding in adj.reason.coding %}
+                  {% if lpdrComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign lpdrComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ adj.reason.text | default: adj.reason.coding[0].display | default: adj.reason.coding[0].code }}"
+            },
+            {% endif %}
+          {% endif %}
+
+          {% comment %} adjudicationamounttype — map each code to its LINE field {% endcomment %}
+          {% if adj.amount %}
+            {% if adjCode == "benefit"          %} "linePaymentAmount":           "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "eligible"         %} "lineAllowedAmount":           "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "submitted"        %} "lineSubmittedAmount":         "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "noncovered"       %} "lineNoncoveredAmount":        "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "copay"            %} "lineCopayAmount":             "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "deductible"       %} "linePatientDeductible":       "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "coinsurance"      %} "lineCoinsuranceAmount":       "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "paidtoprovider"   %} "lineAmountPaidToProvider":    "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "otherpayeramount" %} "lineOtherPayerPaidAmount":    "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "memberreimb"      %} "lineMemberReimbursement":     "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "discount"         %} "lineDiscountAmount":          "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "memberliability"  %} "lineMemberLiabilityAmount":   "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "paidbypatient"    %} "lineAmountPaidByPatient":     "{{ adj.amount.value }}", {% endif %}
+          {% endif %}
+
+          {% comment %} LINE_BENEFIT_PAYMENT_STATUS: benefitpaymentstatus slice {% endcomment %}
+          {% if adjCode == "benefitpaymentstatus" %}
+            {% if adj.reason %}
+            "benefitPaymentStatus": {
+              "codings": [
+                {% assign bpsComma = false %}
+                {% for coding in adj.reason.coding %}
+                  {% if bpsComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign bpsComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ adj.reason.text | default: adj.reason.coding[0].display | default: adj.reason.coding[0].code }}"
+            },
+            {% endif %}
+          {% endif %}
+
+        {% endfor %} {% comment %} end item.adjudication {% endcomment %}
+
+        {% comment %} LINE_SERVICE_DATE / LINE_SERVICE_TO_DATE: item.servicedDate or servicedPeriod {% endcomment %}
+        {% if item.servicedDate %}
+          {% assign svcDate = item.servicedDate %}
+        {% else %}
+          {% assign svcDate = item.servicedPeriod.start %}
+        {% endif %}
+        {%- assign svcToDate = item.servicedPeriod.end -%}
+        {% if svcDate %}
+        "serviceDate": "{{ svcDate }}",
+        {% endif %}
+        {% if svcToDate %}
+        "serviceToDate": "{{ svcToDate }}",
+        {% endif %}
+
+        {% comment %} LINE_PLACE_OF_SERVICE: item.locationCodeableConcept (CodeableConcept) {% endcomment %}
+        {% if item.locationCodeableConcept %}
+        "placeOfServiceCode": {
+          "codings": [
+            {% assign posComma = false %}
+            {% for coding in item.locationCodeableConcept.coding %}
+              {% if posComma %},{% endif %}
+              {
+                "system": "{{ coding.system }}",
+                "code": "{{ coding.code }}",
+                "display": "{{ coding.display | default: coding.code }}"
+              }
+              {% assign posComma = true %}
+            {% endfor %}
+          ],
+          "text": "{{ item.locationCodeableConcept.text | default: item.locationCodeableConcept.coding[0].display | default: item.locationCodeableConcept.coding[0].code }}"
+        },
+        {% endif %}
+
+        {% comment %} LINE_NDC: item detail extension for NDC {% endcomment %}
+        {% for detail in item.detail %}
+          {% for ext in detail.extension %}
+            {% if ext.url contains "ndc" or ext.url contains "NDC" %}
+            "nationalDrugCode": {
+              "codings": [
+                {
+                  "system": "http://hl7.org/fhir/sid/ndc",
+                  "code": "{{ ext.valueCoding.code | default: ext.valueString }}",
+                  "display": "{{ ext.valueCoding.display | default: ext.valueString }}"
+                }
+              ],
+              "text": "{{ ext.valueCoding.code | default: ext.valueString }}"
+            },
+            {% break %}
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      }
+      {% assign lineComma = true %}
+    {% endfor %}
+  {% endfor %}
+]

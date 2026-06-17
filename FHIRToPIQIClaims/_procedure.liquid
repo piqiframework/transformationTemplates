@@ -1,0 +1,111 @@
+"claimProcedure": [
+  {% assign procComma = false %}
+  {% for eob in eobs %}
+    {% for proc in eob.procedure %}
+      {% if procComma %},{% endif %}
+      {
+        {% comment %} Reset procCC each iteration to avoid bleed-over {% endcomment %}
+        {% assign procCC = nil %}
+        {% if proc.procedureCodeableConcept %}
+          {% assign procCC = proc.procedureCodeableConcept %}
+        {% endif %}
+        {% if procCC %}
+        "procedureCode": {
+          "codings": [
+            {% assign pccComma = false %}
+            {% for coding in procCC.coding %}
+              {% if pccComma %},{% endif %}
+              {
+                "system": "{{ coding.system }}",
+                "code": "{{ coding.code }}",
+                "display": "{{ coding.display | default: coding.code }}"
+              }
+              {% assign pccComma = true %}
+            {% endfor %}
+          ],
+          "text": "{{ procCC.text | default: procCC.coding[0].display | default: procCC.coding[0].code }}"
+        },
+        {% endif %}
+
+        {% assign procType = proc.type | first %}
+        {% if procType %}
+        "procedureType": {
+          "codings": [
+            {% assign pptComma = false %}
+            {% for coding in procType.coding %}
+              {% if pptComma %},{% endif %}
+              {
+                "system": "{{ coding.system }}",
+                "code": "{{ coding.code }}",
+                "display": "{{ coding.display | default: coding.code }}"
+              }
+              {% assign pptComma = true %}
+            {% endfor %}
+          ],
+          "text": "{{ procType.text | default: procType.coding[0].display | default: procType.coding[0].code }}"
+        },
+        {% endif %}
+
+        {% if proc.date %}
+        "procedureDate": "{{ proc.date }}",
+        {% endif %}
+
+        {% assign claimLineNums = "" %}
+        {% for item in eob.item %}
+          {% for pRef in item.procedureLinkId %}
+            {% if pRef == proc.sequence %}
+              {% if claimLineNums == "" %}
+                {% assign claimLineNums = item.sequence | append: "" %}
+              {% else %}
+                {% assign claimLineNums = claimLineNums | append: "," | append: item.sequence %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+        {% if claimLineNums != "" %}
+        "procedureClaimLine": "{{ claimLineNums }}",
+        {% endif %}
+
+        {% for item in eob.item %}
+          {% assign linked = false %}
+          {% for pRef in item.procedureLinkId %}
+            {% if pRef == proc.sequence %}
+              {% assign linked = true %}
+              {% break %}
+            {% endif %}
+          {% endfor %}
+          {% if linked %}
+            {% if item.modifier[0] %}
+            "modifierCode1": {
+              "codings": [{% for c in item.modifier[0].coding %}{"system":"{{ c.system }}","code":"{{ c.code }}","display":"{{ c.display | default: c.code }}"}{% unless forloop.last %},{% endunless %}{% endfor %}],
+              "text": "{{ item.modifier[0].text | default: item.modifier[0].coding[0].display | default: item.modifier[0].coding[0].code }}"
+            },
+            {% endif %}
+            {% if item.modifier[1] %}
+            "modifierCode2": {
+              "codings": [{% for c in item.modifier[1].coding %}{"system":"{{ c.system }}","code":"{{ c.code }}","display":"{{ c.display | default: c.code }}"}{% unless forloop.last %},{% endunless %}{% endfor %}],
+              "text": "{{ item.modifier[1].text | default: item.modifier[1].coding[0].display | default: item.modifier[1].coding[0].code }}"
+            },
+            {% endif %}
+            {% if item.modifier[2] %}
+            "modifierCode3": {
+              "codings": [{% for c in item.modifier[2].coding %}{"system":"{{ c.system }}","code":"{{ c.code }}","display":"{{ c.display | default: c.code }}"}{% unless forloop.last %},{% endunless %}{% endfor %}],
+              "text": "{{ item.modifier[2].text | default: item.modifier[2].coding[0].display | default: item.modifier[2].coding[0].code }}"
+            },
+            {% endif %}
+            {% if item.modifier[3] %}
+            "modifierCode4": {
+              "codings": [{% for c in item.modifier[3].coding %}{"system":"{{ c.system }}","code":"{{ c.code }}","display":"{{ c.display | default: c.code }}"}{% unless forloop.last %},{% endunless %}{% endfor %}],
+              "text": "{{ item.modifier[3].text | default: item.modifier[3].coding[0].display | default: item.modifier[3].coding[0].code }}"
+            },
+            {% endif %}
+            {% break %}
+          {% endif %}
+        {% endfor %}
+
+        "_sequence": "{{ proc.sequence }}"
+      }
+      {% assign procComma = true %}
+    {% endfor %}
+  {% endfor %}
+]

@@ -1,5 +1,6 @@
 {% assign labResult = 0 %}
 {% assign vitalSigns = 0 %}
+{% assign clinicalTest = 0 %}
 {% assign healthAssess = 0 %}
 
 {% for entry in observations %}
@@ -17,9 +18,15 @@
           {% assign vitalSigns = vitalSigns | plus: 1 %}
         {% endif %}
 
+      {% when "exam" %}
+        {% if clinicalTest == 0 %}
+          {% include '_clinicalTest' msg: observations -%}
+          {% assign clinicalTest = clinicalTest | plus: 1 %}
+        {% endif %}
+
       {% else %}
 	     {% if healthAssess == 0 %}
-          {% include '_assessment' msg: observations -%}
+          {% include '_assessment' msg: observations, questionnaireResponses: questionnaireResponses -%}
           {% assign healthAssess = healthAssess | plus: 1 %}
 		 {% endif %}
 {% endcase %}

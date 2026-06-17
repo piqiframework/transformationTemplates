@@ -1,0 +1,131 @@
+"clinicalTests":[
+{% for test in observations %}
+  {% if test.category[0].coding[0].code == "exam" -%}
+    {
+      "test": {
+        "codings": [
+          {% for coding in test.code.coding %}
+            {
+              {% include '_codableconcept' coding: coding -%}
+            },
+          {% endfor %}
+        ],
+        {% assign textValue = test.code.text | default: test.code.coding[0].display | default: test.code.coding[0].code %}
+        "text": "{% include 'json_escape' value: textValue %}"
+      },
+      "testDataAbsentReason": {
+        "codings": [
+          {% for coding in test.dataAbsentReason.coding %}
+            {
+              {% include '_codableconcept' coding: coding -%}
+            },
+          {% endfor %}
+        ],
+        {% assign textValue = test.dataAbsentReason.text | default: test.dataAbsentReason.coding[0].display | default: test.dataAbsentReason.coding[0].code %}
+        "text": "{% include 'json_escape' value: textValue %}"
+      },
+      {% if test.valueAttachment %}
+        "hasAttachment": true,
+      {% else %}
+        "hasAttachment": false,
+      {% endif %}
+      "issueDate": "{{ test.issued }}",
+      "effectiveDateTime": "{{test.effectiveDateTime | default: test.effectivePeriod.start }}",
+      "testPeriodStart": "{{ test.effectivePeriod.start }}",
+      "testPeriodEnd": "{{ test.effectivePeriod.end }}",
+      {%- assign performerId =  test.performer[0].identifier.value | default: test.performer[0].reference -%}
+      "performerIdentifier": "{% include 'json_escape' value: performerId %}",
+      "performerName": "{{ test.performer[0].display }}",
+      "testStatus": {
+        "codings": [
+          {
+            "system": "http://hl7.org/fhir/ValueSet/observation-status",
+            "code": "{% include 'json_escape' value: test.status %}",
+            "display": "{% include 'json_escape' value: test.status %}"
+          }
+        ],
+        "text": "{% include 'json_escape' value: test.status %}"
+      },
+      "testCategory": {
+        "codings": [
+          {% for coding in test.category[0].coding %}
+            {
+              {% include '_codableconcept' coding: coding -%}
+            },
+          {% endfor %}
+        ],
+        {%- assign categoryText =  test.category[0].text | default: test.category[0].coding[0].display | default: test.category[0].coding[0].code -%}
+        "text": "{% include 'json_escape' value: categoryText %}"
+      },
+
+      {% include '_resultValue' component: test -%}
+    },
+
+    {% if test.component %}
+      {% for component in test.component %}
+        {
+          "test": {
+            "codings": [
+              {% for coding in component.code.coding %}
+                {
+                  {% include '_codableconcept' coding: coding -%}
+                },
+              {% endfor %}
+            ],
+            {%- assign componentText = component.code.text | default: component.code.coding[0].display | default: component.code.coding[0].code -%}
+            "text": "{% include 'json_escape' value: componentText %}"
+          },
+          {% assign dataAbsentReason = component.dataAbsentReason | default: test.dataAbsentReason %}
+          "testDataAbsentReason": {
+            "codings": [
+              {% for coding in dataAbsentReason.coding %}
+                {
+                  {% include '_codableconcept' coding: coding -%}
+                },
+              {% endfor %}
+            ],
+            {% assign textValue = dataAbsentReason.text | default: dataAbsentReason.coding[0].display | default: dataAbsentReason.coding[0].code %}
+            "text": "{% include 'json_escape' value: textValue %}"
+          },
+          {% if test.valueAttachment %}
+            "hasAttachment": true,
+          {% else %}
+            "hasAttachment": false,
+          {% endif %}
+          "issueDate": "{{ test.issued }}",
+          "effectiveDateTime": "{{test.effectiveDateTime | default: test.effectivePeriod.start }}",
+          "testPeriodStart": "{{ test.effectivePeriod.start }}",
+          "testPeriodEnd": "{{ test.effectivePeriod.end }}",
+          {%- assign performerId =  test.performer[0].identifier.value | default: test.performer[0].reference -%}
+          "performerIdentifier": "{% include 'json_escape' value: performerId %}",
+          "performerName": "{{ test.performer[0].display }}",
+          "testStatus": {
+            "codings": [
+              {
+                "system": "http://hl7.org/fhir/ValueSet/observation-status",
+                "code": "{% include 'json_escape' value: test.status %}",
+                "display": "{% include 'json_escape' value: test.status %}"
+              }
+            ],
+            "text": "{% include 'json_escape' value: test.status %}"
+          },
+          "testCategory": {
+            "codings": [
+              {% for coding in test.category[0].coding %}
+                {
+                  {% include '_codableconcept' coding: coding -%}
+                },
+              {% endfor %}
+            ],
+            {%- assign categoryText =  test.category[0].text | default: test.category[0].coding[0].display | default: test.category[0].coding[0].code -%}
+            "text": "{% include 'json_escape' value: categoryText %}"
+          },
+
+	      {% include '_resultValue' component: component -%}
+        },
+      {% endfor %}
+    {% endif %}
+
+  {% endif %}
+{% endfor %}
+],

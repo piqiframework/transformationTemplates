@@ -1,3 +1,3 @@
 "system": "{{ coding.system }}",
-"code": "{{ coding.code }}",
-"display": "{{ coding.display | strip }}"
+"code": "{% include 'json_escape' value: coding.code %}",
+"display": "{% include 'json_escape' value: coding.display %}"

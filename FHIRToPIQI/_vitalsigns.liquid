@@ -12,15 +12,70 @@
           },
           {% endfor %}
         ],
-        "text": "{{ component.code.text }}"
+        {% assign compText = component.code.text | default: component.code.coding[0].display | default: component.code.coding[0].code %}
+        "text": "{% include 'json_escape' value: compText %}"
       },
-	  "interpretation": "{{ observation.interpretation[0].text }}",
+      {% if component.dataAbsentReason %}
+      "dataAbsentReason": {
+        "codings": [
+          {% for coding in component.dataAbsentReason.coding %}
+            {
+		      {% include '_codableconcept' coding: coding -%}
+            },
+          {% endfor %}
+        ],
+        {%- assign categoryText = component.dataAbsentReason.text | default: component.dataAbsentReason.coding[0].display | default: component.dataAbsentReason.coding[0].code -%}
+        "text": "{% include 'json_escape' value: categoryText %}"
+      },
+      {% else %}
+      "dataAbsentReason": {
+        "codings": [
+          {% for coding in observation.dataAbsentReason.coding %}
+            {
+		      {% include '_codableconcept' coding: coding -%}
+            },
+          {% endfor %}
+        ],
+        {%- assign categoryText = observation.dataAbsentReason.text | default: observation.dataAbsentReason.coding[0].display | default: observation.dataAbsentReason.coding[0].code -%}
+        "text": "{% include 'json_escape' value: categoryText %}"
+      },
+      {% endif %}
+      "vitalSignCategory": {
+        "codings": [
+          {% for coding in observation.category[0].coding %}
+            {
+		      {% include '_codableconcept' coding: coding -%}
+            },
+          {% endfor %}
+        ],
+        {%- assign categoryText = observation.category[0].text | default: observation.category[0].coding[0].display | default: observation.category[0].coding[0].code -%}
+        "text": "{% include 'json_escape' value: categoryText %}"
+      },
       "issuedDateTime": "{{ observation.issued }}",
-      "performedDateTime": "{{ observation.effectiveDateTime }}",
+      "performedDateTime": "{{ observation.effectiveDateTime ?? observation.effectivePeriod?.start }}",
 	  "performingSite": "{{ observation.performer[0].display }}",
-      "resultStatus": "{{ observation.status }}",
+      "interpretation": {
+	    "codings": [
+		  {% for coding in observation.interpretation[0].coding %}
+			{
+			  {% include '_codableconcept' coding: coding -%}
+			},
+		  {% endfor %}
+		],
+		{% assign interpretationText = observation.interpretation[0].text | default: observation.interpretation[0].coding[0].display | default: observation.interpretation[0].coding[0].code %}
+	    "text": "{% include 'json_escape' value: interpretationText %}"
+	  },
+      "resultStatus": {
+		"codings": [
+		  {
+			"system": "http://hl7.org/fhir/ValueSet/observation-status",
+			"code": "{{ observation.status }}",
+			"display": "{{ observation.status | capitalize }}"      
+		  }
+		],
+		"text": "{{ observation.status | capitalize }}"
+	  },
       {% include '_resultValue' component: component -%}
-	  
 	},
     {% endfor %}
   {% else %}
@@ -33,17 +88,58 @@
       },
       {% endfor %}
     ],
-    "text": "{{ observation.code.text  | default: observation.code.coding[0].display }}"
+    {% assign textValue = observation.code.text | default: observation.code.coding[0].display | default: observation.code.coding[0].code %}
+    "text": "{% include 'json_escape' value: textValue %}"
   },
- 
-  "performedDateTime": "{{ observation.effectiveDateTime }}",
+  "dataAbsentReason": {
+    "codings": [
+      {% for coding in observation.dataAbsentReason.coding %}
+        {
+		  {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+    ],
+    {%- assign categoryText = observation.dataAbsentReason.text | default: observation.dataAbsentReason.coding[0].display | default: observation.dataAbsentReason.coding[0].code -%}
+    "text": "{% include 'json_escape' value: categoryText %}"
+  },
+  "vitalSignCategory": {
+    "codings": [
+      {% for coding in observation.category[0].coding %}
+        {
+		  {% include '_codableconcept' coding: coding -%}
+        },
+      {% endfor %}
+    ],
+    {%- assign categoryText = observation.category[0].text | default: observation.category[0].coding[0].display | default: observation.category[0].coding[0].code -%}
+    "text": "{% include 'json_escape' value: categoryText %}"
+  },
+  "performedDateTime": "{{ observation.effectiveDateTime ?? observation.effectivePeriod?.start }}",
   "performingSite": "{{ observation.performer[0].display }}",
   "referenceRange": "{{ observation.referenceRange[0].text }}",
-  "interpretation": "{{ observation.interpretation[0].text }}",
-  "resultStatus": "{{ observation.status }}",
-   {% include '_resultValue' component: observation -%}
-   },
-  {% endif %}
+  "interpretation": {
+	"codings": [
+	  {% for coding in observation.interpretation[0].coding %}
+		{
+		  {% include '_codableconcept' coding: coding -%}
+		},
+	  {% endfor %}
+	],
+	{% assign interpretationText = observation.interpretation[0].text | default: observation.interpretation[0].coding[0].display | default: observation.interpretation[0].coding[0].code %}
+	"text": "{% include 'json_escape' value: interpretationText %}"
+  },
+  "resultStatus": {
+    "codings": [
+	  {
+	    "system": "http://hl7.org/fhir/ValueSet/observation-status",
+		"code": "{{ observation.status }}",
+		"display": "{{ observation.status | capitalize }}"      
+	  }
+	],
+	"text": "{{ observation.status | capitalize }}"
+  },
+  {% include '_resultValue' component: observation -%}
+},
+{% endif %}
 {% endif %}
 {% endfor %}
 ],

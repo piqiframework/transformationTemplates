@@ -1,6 +1,48 @@
 "demographics": {
   {% assign identifier = patient.identifier | first %}
   "patientIdentifier": "{{ identifier.value }}",
+  "firstName": "{% include 'json_escape' value: msg.name[0].given[0] %}",
+  "middleName": "{% include 'json_escape' value: msg.name[0].given[1] %}",
+  "lastName": "{% include 'json_escape' value: msg.name[0].family %}",
+  {% assign telecom = msg.telecom | where: "value" | first %}
+  "telecom": "{% include 'json_escape' value: telecom.value %}",
+  {% assign email = msg.telecom | where: "system", "email" | first %}
+  "email": "{% include 'json_escape' value: email.value %}",
+  {% if msg.address and msg.address.size > 0 %}
+    {% assign first_addr = msg.address | first %}
+    {% assign addr_text = first_addr.text %}
+    {% if addr_text == nil or addr_text == empty %}
+      {% assign addr_text = "" %}
+      {% if first_addr.line %}
+        {% assign addr_text = first_addr.line | join: " " %}
+      {% endif %}
+      {% if first_addr.city %}
+        {% if addr_text != "" %}
+          {% assign addr_text = addr_text | append: ", " %}
+        {% endif %}
+        {% assign addr_text = addr_text | append: first_addr.city %}
+      {% endif %}
+      {% if first_addr.state %}
+        {% if addr_text != "" %}
+          {% assign addr_text = addr_text | append: ", " %}
+        {% endif %}
+        {% assign addr_text = addr_text | append: first_addr.state %}
+      {% endif %}
+      {% if first_addr.postalCode %}
+        {% if addr_text != "" %}
+          {% assign addr_text = addr_text | append: ", " %}
+        {% endif %}
+        {% assign addr_text = addr_text | append: first_addr.postalCode %}
+      {% endif %}
+      {% if first_addr.country %}
+        {% if addr_text != "" %}
+          {% assign addr_text = addr_text | append: ", " %}
+        {% endif %}
+        {% assign addr_text = addr_text | append: first_addr.country %}
+      {% endif %}
+    {% endif %}
+    "currentAddress": "{% include 'json_escape' value: addr_text %}",
+  {% endif %}
   "birthSex": {
   {% assign birth_sex_ext = msg.extension | where: "url", "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex" | first %}
   {% if birth_sex_ext == nil or birth_sex_ext == empty %}
@@ -8,10 +50,10 @@
     {
 	  "system": "http://hl7.org/fhir/administrative-gender",
       "code": "{{ msg.gender }}",
-	  "display": "{{ msg.gender }}"
+	  "display": "{{ msg.gender | capitalize }}"
     }
   ],
-  "text": "{{ msg.gender }}"
+  "text": "{{ msg.gender | capitalize }}"
   {% else %}
   {% assign birth_sex_code = birth_sex_ext.valueCode %}
   {% assign birth_sex_text = "" %}
@@ -36,7 +78,7 @@
   },
 	"birthDate": "{{ msg.birthDate }}",
 	{% if msg.deceasedDateTime %}
-    "deceased": "true",
+    "deceased": true,
 	{% endif %}
 	"deathDate": "{{ msg.deceasedDateTime }}",
     "ethnicity": {
@@ -52,7 +94,7 @@
           {% endfor %}
         ],
 		{% assign text_ext = ethnicity_ext.extension | where: "url", "text" | first %}
-        "text": "{{ text_ext.valueString }}"
+        "text": "{% include 'json_escape' value: text_ext.valueString %}"
       {% endif %}
     },
     "genderIdentity": {
@@ -65,7 +107,8 @@
             },
           {% endfor %}
         ],
-        "text": "{{ gender_ext.valueCodeableConcept.text }}"
+        {% assign genderText = gender_ext.valueCodeableConcept.text | default: gender_ext.valueCodeableConcept.coding[0].display | default: gender_ext.valueCodeableConcept.coding[0].code %}
+        "text": "{{ genderText }}"
       {% endif %}
     },
     "maritalStatus": {
@@ -77,7 +120,8 @@
             },
           {% endfor %}
         ],
-        "text": "{{ msg.maritalStatus.text }}"
+        {% assign maritalText = msg.maritalStatus.text | default: msg.maritalStatus.coding[0].display | default: msg.maritalStatus.coding[0].code %}
+        "text": "{{ maritalText }}"
       {% endif %}
     },
     "primaryLanguage": {
@@ -90,7 +134,8 @@
             },
           {% endfor %}
         ],
-        "text": "{{ lang_ext.text }}"
+        {% assign langText = lang_ext.text | default: lang_ext.coding[0].display | default: lang_ext.coding[0].code %}
+        "text": "{{ langText }}"
       {% endif %}
     },
     "race": {
@@ -108,5 +153,34 @@
 		{% assign race_text = race_ext.extension | where: "url", "text" | first %}
         "text": "{{ race_text.valueString }}"
       {% endif %}
+    },
+    {% for obs in observations %}
+      {% if obs.meta.profile contains "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-sexual-orientation" %}
+        "sexualOrientation": {
+          "codings": [
+            {% for coding in obs.valueCodeableConcept.coding %}
+              {
+                {% include '_codableconcept' coding: coding -%}
+              },
+            {% endfor %}
+          ],
+          {% assign orientationText = obs.valueCodeableConcept.text | default: obs.valueCodeableConcept.coding[0].display | default: obs.valueCodeableConcept.coding[0].code %}
+          "text": "{{ orientationText }}"
+        },
+        {% break %}
+      {% endif %}
+    {% endfor %}
+    {% assign tribalExt = msg.extension | where: "url", "http://hl7.org/fhir/us/core/StructureDefinition/us-core-tribal-affiliation" | first  %}
+    {% assign tribalCCExt = tribalExt.extension | where: "url", "tribalAffiliation" | first  %}
+    "tribalAffiliation": {
+        "codings": [
+          {% for coding in tribalCCExt.valueCodeableConcept.coding %}
+            {
+              {% include '_codableconcept' coding: coding -%}
+            },
+          {% endfor %}
+        ],
+        {% assign tribalText = tribalCCExt.valueCodeableConcept.text | default: tribalCCExt.valueCodeableConcept.coding[0].display | default: tribalCCExt.valueCodeableConcept.coding[0].code %}
+        "text": "{{ tribalText }}"
     }
 },
