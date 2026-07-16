@@ -70,21 +70,7 @@
             {% endif %}
 
             {% if claimIdentType %}
-            "claimIdentifierType": {
-              "codings": [
-                {% assign citComma = false %}
-                {% for coding in claimIdentType.coding %}
-                  {% if citComma %},{% endif %}
-                  {
-                    "system": "{{ coding.system }}",
-                    "code": "{{ coding.code }}",
-                    "display": "{{ coding.display | default: coding.code }}"
-                  }
-                  {% assign citComma = true %}
-                {% endfor %}
-              ],
-              "text": "{{ claimIdentType.text | default: claimIdentType.coding[0].code | default: claimIdentType.coding[0].display }}"
-            },
+            "claimIdentifierType": "{{ claimIdentType.coding[0].code | default: claimIdentType.text }}",
             {% endif %}
 
             {% if claimStartDateVal %}
