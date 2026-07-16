@@ -72,7 +72,7 @@
                 {% assign ctComma = true %}
               {% endfor %}
             ],
-            "text": "{{ covResource.type.text | default: covResource.type.coding[0].display | default: covResource.type.coding[0].code }}"
+            "text": "{{ covResource.type.text | default: covResource.type.coding[0].code | default: covResource.type.coding[0].display }}"
           },
           {% endif %}
 
@@ -104,7 +104,7 @@
                 {% assign relComma = true %}
               {% endfor %}
             ],
-            "text": "{{ covResource.relationship.text | default: covResource.relationship.coding[0].display | default: covResource.relationship.coding[0].code }}"
+            "text": "{{ covResource.relationship.text | default: covResource.relationship.coding[0].code | default: covResource.relationship.coding[0].display }}"
           },
           {% endif %}
 

@@ -1,145 +1,182 @@
 "provider": [
   {% assign provComma = false %}
+  {% assign seenProviders = "" %}
   {% for eob in eobs %}
 
     {% comment %} Billing provider from EOB.provider {% endcomment %}
     {% if eob.provider %}
-      {% if provComma %},{% endif %}
-      {
-        {% comment %} PROV_NPI: prefer identifier.value, fallback to reference string {% endcomment %}
-        {% if eob.provider.identifier.value %}
-          "providerNpi": "{{ eob.provider.identifier.value }}",
-        {% else %}
-          {% assign provRef = eob.provider.reference %}
-          {% assign resolvedOrg = nil %}
-          {% for org in organizations %}
-            {% assign fullUrl = "urn:uuid:" | append: org.id %}
-            {% assign shortRef = "Organization/" | append: org.id %}
-            {% if org.id == provRef or fullUrl == provRef or shortRef == provRef %}
-              {% assign resolvedOrg = org %}
-              {% break %}
+      {% assign provKey = eob.provider.reference | default: eob.provider.identifier.value %}
+      {% assign provSep = "||" | append: provKey | append: "||" %}
+      {% unless seenProviders contains provSep %}
+        {% assign seenProviders = seenProviders | append: provSep %}
+        {% if provComma %},{% endif %}
+        {
+          {% comment %} PROV_NPI: prefer identifier.value, fallback to reference string {% endcomment %}
+          {% if eob.provider.identifier.value %}
+            "providerNpi": "{{ eob.provider.identifier.value }}",
+          {% else %}
+            {% assign provRef = eob.provider.reference %}
+            {% assign resolvedOrg = nil %}
+            {% for org in organizations %}
+              {% assign fullUrl = "urn:uuid:" | append: org.id %}
+              {% assign shortRef = "Organization/" | append: org.id %}
+              {% if org.id == provRef or fullUrl == provRef or shortRef == provRef %}
+                {% assign resolvedOrg = org %}
+                {% break %}
+              {% endif %}
+            {% endfor %}
+            {% if resolvedOrg %}
+              "providerNpi": "{{ resolvedOrg.identifier[0].value }}",
+            {% elsif provRef contains "|" %}
+              {% assign npiParts = provRef | split: "|" %}
+              "providerNpi": "{{ npiParts | last }}",
+            {% elsif provRef %}
+              "providerNpi": "{{ provRef }}",
+            {% endif %}
+          {% endif %}
+
+          {% if eob.provider.display %}
+            "providerName": "{{ eob.provider.display }}",
+          {% elsif resolvedOrg.name %}
+            "providerName": "{{ resolvedOrg.name }}",
+          {% endif %}
+
+          {% assign provAddr = resolvedOrg.address | first %}
+          {% if provAddr %}
+            {% assign addrLine = provAddr.line | first %}
+            {% assign addrParts = "" %}
+            {% if addrLine %}{% assign addrParts = addrLine %}{% endif %}
+            {% if provAddr.city %}{% assign addrParts = addrParts | append: ", " | append: provAddr.city %}{% endif %}
+            {% if provAddr.state %}{% assign addrParts = addrParts | append: ", " | append: provAddr.state %}{% endif %}
+            {% if provAddr.postalCode %}{% assign addrParts = addrParts | append: " " | append: provAddr.postalCode %}{% endif %}
+            {% if addrParts != "" %}
+            "providerAddress": "{{ addrParts | strip }}",
+            {% endif %}
+          {% endif %}
+
+          {% comment %} PROV_PROV_CONTRACT_STATUS: EOB.adjudication[billingnetworkstatus] {% endcomment %}
+          {% for adj in eob.adjudication %}
+            {% if adj.category.coding[0].code == "billingnetworkstatus" %}
+            "providerContractingStatus": {
+              "codings": [
+                {% assign pcsComma = false %}
+                {% for coding in adj.reason.coding %}
+                  {% if pcsComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign pcsComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ adj.reason.text | default: adj.reason.coding[0].code | default: adj.reason.coding[0].display }}"
+            },
+            {% endif %}
+            {% comment %} PROV_SITE_OF_SERV_NET_STATUS {% endcomment %}
+            {% if adj.category.coding[0].code == "benefitpaymentstatus" %}
+            "siteOfServiceNetworkStatus": {
+              "codings": [
+                {% assign sosnComma = false %}
+                {% for coding in adj.reason.coding %}
+                  {% if sosnComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign sosnComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ adj.reason.text | default: adj.reason.coding[0].code | default: adj.reason.coding[0].display }}"
+            },
             {% endif %}
           {% endfor %}
-          {% if resolvedOrg %}
-            "providerNpi": "{{ resolvedOrg.identifier[0].value }}",
-          {% elsif provRef contains "|" %}
-            {% assign npiParts = provRef | split: "|" %}
-            "providerNpi": "{{ npiParts | last }}",
-          {% elsif provRef %}
-            "providerNpi": "{{ provRef }}",
-          {% endif %}
-        {% endif %}
 
-        {% if eob.provider.display %}
-          "providerName": "{{ eob.provider.display }}",
-        {% elsif resolvedOrg.name %}
-          "providerName": "{{ resolvedOrg.name }}",
-        {% endif %}
-
-        {% comment %} PROV_PROV_CONTRACT_STATUS: EOB.adjudication[billingnetworkstatus] {% endcomment %}
-        {% for adj in eob.adjudication %}
-          {% if adj.category.coding[0].code == "billingnetworkstatus" %}
-          "providerContractingStatus": {
-            "codings": [
-              {% assign pcsComma = false %}
-              {% for coding in adj.reason.coding %}
-                {% if pcsComma %},{% endif %}
-                {
-                  "system": "{{ coding.system }}",
-                  "code": "{{ coding.code }}",
-                  "display": "{{ coding.display | default: coding.code }}"
-                }
-                {% assign pcsComma = true %}
-              {% endfor %}
-            ],
-            "text": "{{ adj.reason.text | default: adj.reason.coding[0].display | default: adj.reason.coding[0].code }}"
-          },
-          {% endif %}
-          {% comment %} PROV_SITE_OF_SERV_NET_STATUS {% endcomment %}
-          {% if adj.category.coding[0].code == "benefitpaymentstatus" %}
-          "siteOfServiceNetworkStatus": {
-            "codings": [
-              {% assign sosnComma = false %}
-              {% for coding in adj.reason.coding %}
-                {% if sosnComma %},{% endif %}
-                {
-                  "system": "{{ coding.system }}",
-                  "code": "{{ coding.code }}",
-                  "display": "{{ coding.display | default: coding.code }}"
-                }
-                {% assign sosnComma = true %}
-              {% endfor %}
-            ],
-            "text": "{{ adj.reason.text | default: adj.reason.coding[0].display | default: adj.reason.coding[0].code }}"
-          },
-          {% endif %}
-        {% endfor %}
-
-        "_providerRole": "billing"
-      }
-      {% assign provComma = true %}
+          "_providerRole": "billing"
+        }
+        {% assign provComma = true %}
+      {% endunless %}
     {% endif %}
 
-    {% comment %} Care team members {% endcomment %}
+    {% comment %} Care team members — deduplicated by provider reference {% endcomment %}
     {% for ct in eob.careTeam %}
-      {% if provComma %},{% endif %}
-      {
-        {% comment %} PROV_NPI / PROV_NAME: prefer inline identifier/display, then resolve from bundle {% endcomment %}
-        {% if ct.provider.identifier.value %}
-          "providerNpi": "{{ ct.provider.identifier.value }}",
-        {% else %}
-          {% assign ctRef = ct.provider.reference %}
-          {% assign resolvedPract = nil %}
-          {% for pract in practitioners %}
-            {% assign fullUrl = "urn:uuid:" | append: pract.id %}
-            {% assign shortRef = "Practitioner/" | append: pract.id %}
-            {% if pract.id == ctRef or fullUrl == ctRef or shortRef == ctRef %}
-              {% assign resolvedPract = pract %}
-              {% break %}
-            {% endif %}
-          {% endfor %}
-          {% if resolvedPract %}
-            "providerNpi": "{{ resolvedPract.identifier[0].value }}",
-          {% elsif ctRef contains "|" %}
-            {% assign ctNpiParts = ctRef | split: "|" %}
-            "providerNpi": "{{ ctNpiParts | last }}",
-          {% elsif ctRef %}
-            "providerNpi": "{{ ctRef }}",
-          {% endif %}
-        {% endif %}
-
-        {% if ct.provider.display %}
-          "providerName": "{{ ct.provider.display }}",
-        {% elsif resolvedPract %}
-          {% assign practName = resolvedPract.name | first %}
-          "providerName": "{{ practName.prefix | first }} {{ practName.given | first }} {{ practName.family }}",
-        {% endif %}
-
-        {% comment %} PROV_CARE_TEAM_ROLE {% endcomment %}
-        {% if ct.role %}
-        "careTeamRole": "{{ ct.role.coding[0].code | default: ct.role.text }}",
-        {% endif %}
-
-        {% comment %} PROV_TYPE {% endcomment %}
-        {% if ct.role %}
-        "providerType": {
-          "codings": [
-            {% assign ptComma = false %}
-            {% for coding in ct.role.coding %}
-              {% if ptComma %},{% endif %}
-              {
-                "system": "{{ coding.system }}",
-                "code": "{{ coding.code }}",
-                "display": "{{ coding.display | default: coding.code }}"
-              }
-              {% assign ptComma = true %}
+      {% assign ctKey = ct.provider.reference | default: ct.provider.identifier.value %}
+      {% assign ctSep = "||" | append: ctKey | append: "||" %}
+      {% unless seenProviders contains ctSep %}
+        {% assign seenProviders = seenProviders | append: ctSep %}
+        {% if provComma %},{% endif %}
+        {
+          {% comment %} PROV_NPI / PROV_NAME: prefer inline identifier/display, then resolve from bundle {% endcomment %}
+          {% if ct.provider.identifier.value %}
+            "providerNpi": "{{ ct.provider.identifier.value }}",
+          {% else %}
+            {% assign ctRef = ct.provider.reference %}
+            {% assign resolvedPract = nil %}
+            {% for pract in practitioners %}
+              {% assign fullUrl = "urn:uuid:" | append: pract.id %}
+              {% assign shortRef = "Practitioner/" | append: pract.id %}
+              {% if pract.id == ctRef or fullUrl == ctRef or shortRef == ctRef %}
+                {% assign resolvedPract = pract %}
+                {% break %}
+              {% endif %}
             {% endfor %}
-          ],
-          "text": "{{ ct.role.text | default: ct.role.coding[0].display | default: ct.role.coding[0].code }}"
-        },
-        {% endif %}
-      }
-      {% assign provComma = true %}
+            {% if resolvedPract %}
+              "providerNpi": "{{ resolvedPract.identifier[0].value }}",
+            {% elsif ctRef contains "|" %}
+              {% assign ctNpiParts = ctRef | split: "|" %}
+              "providerNpi": "{{ ctNpiParts | last }}",
+            {% elsif ctRef %}
+              "providerNpi": "{{ ctRef }}",
+            {% endif %}
+          {% endif %}
+
+          {% if ct.provider.display %}
+            "providerName": "{{ ct.provider.display }}",
+          {% elsif resolvedPract %}
+            {% assign practName = resolvedPract.name | first %}
+            "providerName": "{{ practName.prefix | first }} {{ practName.given | first }} {{ practName.family }}",
+          {% endif %}
+
+          {% assign ctAddr = resolvedPract.address | first %}
+          {% if ctAddr %}
+            {% assign ctAddrLine = ctAddr.line | first %}
+            {% assign ctAddrParts = "" %}
+            {% if ctAddrLine %}{% assign ctAddrParts = ctAddrLine %}{% endif %}
+            {% if ctAddr.city %}{% assign ctAddrParts = ctAddrParts | append: ", " | append: ctAddr.city %}{% endif %}
+            {% if ctAddr.state %}{% assign ctAddrParts = ctAddrParts | append: ", " | append: ctAddr.state %}{% endif %}
+            {% if ctAddr.postalCode %}{% assign ctAddrParts = ctAddrParts | append: " " | append: ctAddr.postalCode %}{% endif %}
+            {% if ctAddrParts != "" %}
+            "providerAddress": "{{ ctAddrParts | strip }}",
+            {% endif %}
+          {% endif %}
+
+          {% comment %} PROV_CARE_TEAM_ROLE {% endcomment %}
+          {% if ct.role %}
+          "careTeamRole": "{{ ct.role.coding[0].code | default: ct.role.text }}",
+          {% endif %}
+
+          {% comment %} PROV_TYPE {% endcomment %}
+          {% if ct.role %}
+          "providerType": {
+            "codings": [
+              {% assign ptComma = false %}
+              {% for coding in ct.role.coding %}
+                {% if ptComma %},{% endif %}
+                {
+                  "system": "{{ coding.system }}",
+                  "code": "{{ coding.code }}",
+                  "display": "{{ coding.display | default: coding.code }}"
+                }
+                {% assign ptComma = true %}
+              {% endfor %}
+            ],
+            "text": "{{ ct.role.text | default: ct.role.coding[0].code | default: ct.role.coding[0].display }}"
+          },
+          {% endif %}
+        }
+        {% assign provComma = true %}
+      {% endunless %}
     {% endfor %}
 
   {% endfor %}

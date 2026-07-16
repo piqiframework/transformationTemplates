@@ -22,7 +22,7 @@
               {% assign rccComma = true %}
             {% endfor %}
           ],
-          "text": "{{ item.revenue.text | default: item.revenue.coding[0].display | default: item.revenue.coding[0].code }}"
+          "text": "{{ item.revenue.text | default: item.revenue.coding[0].code | default: item.revenue.coding[0].display }}"
         },
         {% endif %}
 
@@ -41,7 +41,7 @@
               {% assign lpcComma = true %}
             {% endfor %}
           ],
-          "text": "{{ item.productOrService.text | default: item.productOrService.coding[0].display | default: item.productOrService.coding[0].code }}"
+          "text": "{{ item.productOrService.text | default: item.productOrService.coding[0].code | default: item.productOrService.coding[0].display }}"
         },
         "typeOfService": {
           "codings": [
@@ -56,7 +56,7 @@
               {% assign tosComma = true %}
             {% endfor %}
           ],
-          "text": "{{ item.productOrService.text | default: item.productOrService.coding[0].display | default: item.productOrService.coding[0].code }}"
+          "text": "{{ item.productOrService.text | default: item.productOrService.coding[0].code | default: item.productOrService.coding[0].display }}"
         },
         {% endif %}
 
@@ -75,7 +75,7 @@
               {% assign lpmComma = true %}
             {% endfor %}
           ],
-          "text": "{{ item.modifier[0].text | default: item.modifier[0].coding[0].display | default: item.modifier[0].coding[0].code }}"
+          "text": "{{ item.modifier[0].text | default: item.modifier[0].coding[0].code | default: item.modifier[0].coding[0].display }}"
         },
         {% endif %}
 
@@ -92,6 +92,22 @@
         {% endif %}
         {% if allowedUnitsVal != "" %}
         "allowedNumberOfUnits": "{{ allowedUnitsVal }}",
+        {% endif %}
+
+        {% if item.quantity.value %}
+        "quantityDispensed": "{{ item.quantity.value }}",
+        {% endif %}
+        {% if item.quantity.unit or item.quantity.code %}
+        "quantityQualifierCode": {
+          "codings": [
+            {
+              "system": "{{ item.quantity.system | default: 'http://unitsofmeasure.org' }}",
+              "code": "{{ item.quantity.code | default: item.quantity.unit }}",
+              "display": "{{ item.quantity.unit | default: item.quantity.code }}"
+            }
+          ],
+          "text": "{{ item.quantity.unit | default: item.quantity.code }}"
+        },
         {% endif %}
 
         {% comment %} Item-level adjudication amounts — iterate slices {% endcomment %}
@@ -114,7 +130,7 @@
                   {% assign lpdrComma = true %}
                 {% endfor %}
               ],
-              "text": "{{ adj.reason.text | default: adj.reason.coding[0].display | default: adj.reason.coding[0].code }}"
+              "text": "{{ adj.reason.text | default: adj.reason.coding[0].code | default: adj.reason.coding[0].display }}"
             },
             {% endif %}
           {% endif %}
@@ -134,6 +150,13 @@
             {% if adjCode == "discount"         %} "lineDiscountAmount":          "{{ adj.amount.value }}", {% endif %}
             {% if adjCode == "memberliability"  %} "lineMemberLiabilityAmount":   "{{ adj.amount.value }}", {% endif %}
             {% if adjCode == "paidbypatient"    %} "lineAmountPaidByPatient":     "{{ adj.amount.value }}", {% endif %}
+            {% if adjCode == "drugcost"         %} "drugCost":                    "{{ adj.amount.value }}", {% endif %}
+          {% endif %}
+
+          {% if adjCode == "memberreimbursement" %}
+            {% if adj.reason %}
+            "paymentMemberExplanation": "{{ adj.reason.text | default: adj.reason.coding[0].code }}",
+            {% endif %}
           {% endif %}
 
           {% comment %} LINE_BENEFIT_PAYMENT_STATUS: benefitpaymentstatus slice {% endcomment %}
@@ -152,7 +175,7 @@
                   {% assign bpsComma = true %}
                 {% endfor %}
               ],
-              "text": "{{ adj.reason.text | default: adj.reason.coding[0].display | default: adj.reason.coding[0].code }}"
+              "text": "{{ adj.reason.text | default: adj.reason.coding[0].code | default: adj.reason.coding[0].display }}"
             },
             {% endif %}
           {% endif %}
@@ -188,7 +211,7 @@
               {% assign posComma = true %}
             {% endfor %}
           ],
-          "text": "{{ item.locationCodeableConcept.text | default: item.locationCodeableConcept.coding[0].display | default: item.locationCodeableConcept.coding[0].code }}"
+          "text": "{{ item.locationCodeableConcept.text | default: item.locationCodeableConcept.coding[0].code | default: item.locationCodeableConcept.coding[0].display }}"
         },
         {% endif %}
 

@@ -13,6 +13,7 @@
 {% assign goals = resources | where: "resourceType", "Goal" %}
 {% assign immunizations = resources | where: "resourceType", "Immunization" %}
 {% assign medRequests = resources | where: "resourceType", "MedicationRequest" %}
+{% assign medEntries = entries | where: "resource.resourceType", "Medication" %}
 {% assign medications = resources | where: "resourceType", "Medication" %}
 {% assign medStatements = resources | where: "resourceType", "MedicationStatement" %}
 {% assign medAdmin = resources | where: "resourceType", "MedicationAdministration" %}
@@ -24,6 +25,305 @@
 {% assign provenances = resources | where: "resourceType", "Provenance" %}
 {% assign practitioners = resources | where: "resourceType", "Practitioner" %}
 {% assign practitionerRoles = resources | where: "resourceType", "PractitionerRole" %}
+
+"messageID": "{{ patient.id }}",
+"patient": {
+  {% include '_patient' msg: patient observations: observations -%}
+
+  {% if allergies.size > 0 %},
+  {% include '_allergyintolerance' allergies: allergies -%}
+  {% endif %}
+
+  {% if carePlans.size > 0 %},
+  {% include '_careplan' careplans: carePlans -%}
+  {% endif %}
+
+  {% if conditions.size > 0 %},
+  {% include '_condition' conditions: conditions -%}
+  {% endif %}
+
+  {% if coverages.size > 0 %},
+  {% include '_coverage' coverages: coverages -%}
+  {% endif %}
+
+  {% if immunizations.size > 0 %},
+  {% include '_immunization' immunizations: immunizations -%}
+  {% endif %}
+
+  {% if reports.size > 0 %},
+  {% include '_diagnosticreport' reports: reports observations: observations specimens: specimens -%}
+  {% endif %}
+
+  {% if procedures.size > 0 %},
+  {% include '_procedure' procedures: procedures -%}
+  {% endif %}
+
+  {% if devices.size > 0 %},
+  {% include '_device' devices: devices -%}
+  {% endif %}
+
+  {% if docs.size > 0 %},
+  {% include '_documentReference' docs: docs -%}
+  {% endif %}
+
+  {% if goals.size > 0 %},
+  {% include '_goal' goals: goals -%}
+  {% endif %}
+
+  {% if observations.size > 0 %},
+  {% include '_observation' observations: observations reports: reports specimens: specimens questionnaireResponses: questionnaireResponses -%}
+  {% endif %}
+
+  {% if practitioners.size > 0 %},
+  {% include '_practitioner' practitioners: practitioners practitionerRoles: practitionerRoles -%}
+  {% endif %}
+
+  {% if provenances.size > 0 %},
+  {% include '_provenance' provenances: provenances -%}
+  {% endif %}
+
+  {% if encounters.size > 0 %},
+  {% include '_encounter' encounters: encounters conditions: conditions -%}
+  {% endif %}
+
+  {% if medRequests.size > 0 or medStatements.size > 0 or medications.size > 0 or medAdmin.size > 0 or medDispense.size > 0 %},
+  "medications": [
+    {%- assign medComma = false -%}
+
+    {% for med in medRequests %}
+      {% if medComma %},{% endif %}
+      {% include '_medication' med: med type: "MedicationRequest" refs: medications -%}
+      {% assign medComma = true %}
+    {% endfor %}
+
+    {% for med in medStatements %}
+      {% if medComma %},{% endif %}
+      {% include '_medication' med: med type: "MedicationStatement" refs: medications -%}
+      {% assign medComma = true %}
+    {% endfor %}
+
+    {% for med in medAdmin %}
+      {% if medComma %},{% endif %}
+      {% include '_medication' med: med type: "MedicationAdministration" refs: medications -%}
+      {% assign medComma = true %}
+    {% endfor %}
+
+    {% for med in medDispense %}
+      {% if medComma %},{% endif %}
+      {% include '_medication' med: med type: "MedicationDispense" refs: medications -%}
+      {% assign medComma = true %}
+    {% endfor %}
+
+    {%- comment -%}
+      Orphaned Medications: include only if not referenced by any order/statement/admin/dispense.
+      Checks all FHIR reference forms: fullUrl, ResourceType/id, urn:uuid:id, and bare id.
+    {%- endcomment -%}
+    {% for medEntry in medEntries %}
+      {%- assign med = medEntry.resource -%}
+      {%- assign refFullUrl   = medEntry.fullUrl -%}
+      {%- assign refRelative  = "Medication/" | append: med.id -%}
+      {%- assign refUrnUuid   = "urn:uuid:" | append: med.id -%}
+      {%- assign refBareId    = med.id -%}
+
+      {%- assign isReferenced = false -%}
+
+      {% for src in medRequests %}
+        {%- assign r = src.medicationReference.reference -%}
+        {% if r == refFullUrl or r == refRelative or r == refUrnUuid or r == refBareId %}
+          {%- assign isReferenced = true -%}{% break %}
+        {% endif %}
+      {% endfor %}
+      {% unless isReferenced %}
+        {% for src in medStatements %}
+          {%- assign r = src.medicationReference.reference -%}
+          {% if r == refFullUrl or r == refRelative or r == refUrnUuid or r == refBareId %}
+            {%- assign isReferenced = true -%}{% break %}
+          {% endif %}
+        {% endfor %}
+      {% endunless %}
+      {% unless isReferenced %}
+        {% for src in medAdmin %}
+          {%- assign r = src.medicationReference.reference -%}
+          {% if r == refFullUrl or r == refRelative or r == refUrnUuid or r == refBareId %}
+            {%- assign isReferenced = true -%}{% break %}
+          {% endif %}
+        {% endfor %}
+      {% endunless %}
+      {% unless isReferenced %}
+        {% for src in medDispense %}
+          {%- assign r = src.medicationReference.reference -%}
+          {% if r == refFullUrl or r == refRelative or r == refUrnUuid or r == refBareId %}
+            {%- assign isReferenced = true -%}{% break %}
+          {% endif %}
+        {% endfor %}
+      {% endunless %}
+
+      {% unless isReferenced %}
+        {% if medComma %},{% endif %}
+        {% include '_medication' med: med type: "Medication" -%}
+        {% assign medComma = true %}
+      {% endunless %}
+    {% endfor %}
+  ]
+  {% endif %}
+}
+{% assign allergies = resources | where: "resourceType", "AllergyIntolerance" %}
+{% assign carePlans = resources | where: "resourceType", "CarePlan" %}
+{% assign claims = resources | where: "resourceType", "Claim" %}
+{% assign conditions = resources | where: "resourceType", "Condition" %}
+{% assign coverages = resources | where: "resourceType", "Coverage" %}
+{% assign devices = resources | where: "resourceType", "Device" %}
+{% assign reports = resources | where: "resourceType", "DiagnosticReport" %}
+{% assign docs = resources | where: "resourceType", "DocumentReference" %}
+{% assign encounters = resources | where: "resourceType", "Encounter" %}
+{% assign goals = resources | where: "resourceType", "Goal" %}
+{% assign immunizations = resources | where: "resourceType", "Immunization" %}
+{% assign medRequests = resources | where: "resourceType", "MedicationRequest" %}
+{% assign medications = resources | where: "resourceType", "Medication" %}
+{% assign medStatements = resources | where: "resourceType", "MedicationStatement" %}
+{% assign medAdmin = resources | where: "resourceType", "MedicationAdministration" %}
+{% assign medDispense = resources | where: "resourceType", "MedicationDispense" %}
+{% assign observations = resources | where: "resourceType", "Observation" %}
+{% assign questionnaireResponses = resources | where: "resourceType", "QuestionnaireResponse" %}
+{% assign specimens = resources | where: "resourceType", "Specimen" %}
+{% assign procedures = resources | where: "resourceType", "Procedure" %}
+{% assign provenances = resources | where: "resourceType", "Provenance" %}
+{% assign practitioners = resources | where: "resourceType", "Practitioner" %}
+{% assign practitionerRoles = resources | where: "resourceType", "PractitionerRole" %}
+
+"messageID": "{{ patient.id }}",
+"patient": {
+  {% include '_patient' msg: patient observations: observations -%}
+
+  {% if allergies.size > 0 %},
+  {% include '_allergyintolerance' allergies: allergies -%}
+  {% endif %}
+
+  {% if carePlans.size > 0 %},
+  {% include '_careplan' careplans: carePlans -%}
+  {% endif %}
+
+  {% if conditions.size > 0 %},
+  {% include '_condition' conditions: conditions -%}
+  {% endif %}
+
+  {% if coverages.size > 0 %},
+  {% include '_coverage' coverages: coverages -%}
+  {% endif %}
+
+  {% if immunizations.size > 0 %},
+  {% include '_immunization' immunizations: immunizations -%}
+  {% endif %}
+
+  {% if reports.size > 0 %},
+  {% include '_diagnosticreport' reports: reports observations: observations specimens: specimens -%}
+  {% endif %}
+
+  {% if procedures.size > 0 %},
+  {% include '_procedure' procedures: procedures -%}
+  {% endif %}
+
+  {% if devices.size > 0 %},
+  {% include '_device' devices: devices -%}
+  {% endif %}
+
+  {% if docs.size > 0 %},
+  {% include '_documentReference' docs: docs -%}
+  {% endif %}
+
+  {% if goals.size > 0 %},
+  {% include '_goal' goals: goals -%}
+  {% endif %}
+
+  {% if observations.size > 0 %},
+  {% include '_observation' observations: observations reports: reports specimens: specimens questionnaireResponses: questionnaireResponses -%}
+  {% endif %}
+
+  {% if practitioners.size > 0 %},
+  {% include '_practitioner' practitioners: practitioners practitionerRoles: practitionerRoles -%}
+  {% endif %}
+
+  {% if provenances.size > 0 %},
+  {% include '_provenance' provenances: provenances -%}
+  {% endif %}
+
+  {% if encounters.size > 0 %},
+  {% include '_encounter' encounters: encounters conditions: conditions -%}
+  {% endif %}
+
+  {% if medRequests.size > 0 or medStatements.size > 0 or medications.size > 0 or medAdmin.size > 0 or medDispense.size > 0 %},
+  "medications": [
+    {%- assign medComma = false -%}
+    
+    {%- comment -%} MedicationRequests {%- endcomment -%}
+    {% for med in medRequests %}
+      {% if medComma %},{% endif %}
+      {% include '_medication' med: med type: "MedicationRequest" refs: medications -%}
+      {% assign medComma = true %}
+    {% endfor %}
+    
+    {%- comment -%} MedicationStatements {%- endcomment -%}
+    {% for med in medStatements %}
+      {% if medComma %},{% endif %}
+      {% include '_medication' med: med type: "MedicationStatement" refs: medications -%}
+      {% assign medComma = true %}
+    {% endfor %}
+    
+    {%- comment -%} MedicationAdministration {%- endcomment -%}
+    {% for med in medAdmin %}
+      {% if medComma %},{% endif %}
+      {% include '_medication' med: med type: "MedicationAdministration" refs: medications -%}
+      {% assign medComma = true %}
+    {% endfor %}
+    
+    {%- comment -%} MedicationDispense {%- endcomment -%}
+    {% for med in medDispense %}
+      {% if medComma %},{% endif %}
+      {% include '_medication' med: med type: "MedicationDispense" refs: medications -%}
+      {% assign medComma = true %}
+    {% endfor %}
+    
+    {%- comment -%}
+      Orphaned Medications: include only if not referenced by any med order/statement/admin/dispense.
+      Uses fhir_lookup (O(1)) instead of scanning all arrays for each medication.
+    {%- endcomment -%}
+    {% for med in medications %}
+      {%- assign medRef = "Medication/" | append: med.id -%}
+      {%- assign resolvedMed = medRef | resolve_reference -%}
+      {%- comment -%} resolvedMed is non-nil only when the Medication resource itself is
+          in the bundle; isReferenced checks whether another resource points TO it. {%- endcomment -%}
+      {%- assign isReferenced = false -%}
+      {% for req in medRequests %}
+        {%- assign reqResolved = req.medicationReference.reference | resolve_reference -%}
+        {% if reqResolved == resolvedMed %}{% assign isReferenced = true %}{% break %}{% endif %}
+      {% endfor %}
+      {% unless isReferenced %}
+        {% for stmt in medStatements %}
+          {%- assign stmtResolved = stmt.medicationReference.reference | resolve_reference -%}
+          {% if stmtResolved == resolvedMed %}{% assign isReferenced = true %}{% break %}{% endif %}
+        {% endfor %}
+      {% endunless %}
+      {% unless isReferenced %}
+        {% for admin in medAdmin %}
+          {%- assign adminResolved = admin.medicationReference.reference | resolve_reference -%}
+          {% if adminResolved == resolvedMed %}{% assign isReferenced = true %}{% break %}{% endif %}
+        {% endfor %}
+      {% endunless %}
+      {% unless isReferenced %}
+        {% for disp in medDispense %}
+          {%- assign dispResolved = disp.medicationReference.reference | resolve_reference -%}
+          {% if dispResolved == resolvedMed %}{% assign isReferenced = true %}{% break %}{% endif %}
+        {% endfor %}
+      {% endunless %}
+      {% unless isReferenced %}
+        {% if medComma %},{% endif %}
+        {% include '_medication' med: med type: "Medication" -%}
+        {% assign medComma = true %}
+      {% endunless %}
+    {% endfor %}
+  ]
+  {% endif %}
+}
 
 "messageID": "{{ patient.id }}",
 "patient": {

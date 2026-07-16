@@ -11,7 +11,7 @@
         },
       {% endfor %}
     ],
-    {%- assign typeText = provenance.agent[0].type.text | default: provenance.agent[0].type.coding[0].display | default: provenance.agent[0].type.coding[0].code -%}
+    {%- assign typeText = provenance.agent[0].type.text | default: provenance.agent[0].type.coding[0].code | default: provenance.agent[0].type.coding[0].display -%}
     "text": "{% include 'json_escape' value: typeText %}"
   },
 
@@ -61,7 +61,7 @@
         },
       {% endfor %}
     ],
-    {%- assign typeText = authorType.text | default: authorType.coding[0].display | default: authorType.coding[0].code -%}
+    {%- assign typeText = authorType.text | default: authorType.coding[0].code | default: authorType.coding[0].display -%}
     "text": "{% include 'json_escape' value: typeText %}"
   },
   "transmitterType": {
@@ -72,7 +72,7 @@
         },
       {% endfor %}
     ],
-    {%- assign typeText = transmitterType.text | default: transmitterType.coding[0].display | default: transmitterType.coding[0].code -%}
+    {%- assign typeText = transmitterType.text | default: transmitterType.coding[0].code | default: transmitterType.coding[0].display -%}
     "text": "{% include 'json_escape' value: typeText %}"
   },
   "recordedDateTime": "{{ provenance.recorded }}",

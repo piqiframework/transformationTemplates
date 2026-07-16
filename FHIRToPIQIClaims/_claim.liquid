@@ -8,17 +8,46 @@
     {% unless typeCode == "pharmacy" or typeCode == "oral" or typeCode == "dental" %}
       {% unless subTypeCode == "pharmacy" or subTypeCode == "oral" or subTypeCode == "dental" %}
 
-        {% comment %} Resolve unique claim identifier once per EOB {% endcomment %}
+        {% comment %} Resolve unique claim identifier and identifier type once per EOB {% endcomment %}
         {% assign uniqueId = "" %}
+        {% assign claimIdentType = nil %}
         {% for ident in eob.identifier %}
           {% if ident.type.coding[0].code == "uc" or ident.type.text == "uniqueclaimid" %}
             {% assign uniqueId = ident.value %}
+            {% assign claimIdentType = ident.type %}
             {% break %}
           {% endif %}
         {% endfor %}
         {% if uniqueId == "" %}
           {% assign uniqueId = eob.identifier[0].value %}
+          {% assign claimIdentType = eob.identifier[0].type %}
         {% endif %}
+
+        {% comment %} Pre-compute claim-level service dates from first item {% endcomment %}
+        {% assign firstItem = eob.item | first %}
+        {% if firstItem.servicedDate %}
+          {% assign claimStartDateVal = firstItem.servicedDate %}
+        {% elsif firstItem.servicedPeriod.start %}
+          {% assign claimStartDateVal = firstItem.servicedPeriod.start %}
+        {% else %}
+          {% assign claimStartDateVal = eob.billablePeriod.start %}
+        {% endif %}
+        {% if firstItem.servicedPeriod.end %}
+          {% assign claimEndDateVal = firstItem.servicedPeriod.end %}
+        {% else %}
+          {% assign claimEndDateVal = eob.billablePeriod.end %}
+        {% endif %}
+
+        {% comment %} Resolve insurer for primaryPayerIdentifier {% endcomment %}
+        {% assign insurerRef = eob.insurer.reference %}
+        {% assign resolvedInsurerRes = nil %}
+        {% for org in organizations %}
+          {% assign orgFullId = "Organization/" | append: org.id %}
+          {% if org.id == insurerRef or orgFullId == insurerRef %}
+            {% assign resolvedInsurerRes = org %}
+            {% break %}
+          {% endif %}
+        {% endfor %}
 
         {% comment %} Emit one claim object per total entry; fall back to one object if no totals {% endcomment %}
         {% assign hasTotals = false %}
@@ -38,6 +67,31 @@
           {
             {% if uniqueId %}
             "payerClaimUniqueIdentifier": "{{ uniqueId }}",
+            {% endif %}
+
+            {% if claimIdentType %}
+            "claimIdentifierType": {
+              "codings": [
+                {% assign citComma = false %}
+                {% for coding in claimIdentType.coding %}
+                  {% if citComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign citComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ claimIdentType.text | default: claimIdentType.coding[0].code | default: claimIdentType.coding[0].display }}"
+            },
+            {% endif %}
+
+            {% if claimStartDateVal %}
+            "claimStartDate": "{{ claimStartDateVal }}",
+            {% endif %}
+            {% if claimEndDateVal %}
+            "claimServiceEndDate": "{{ claimEndDateVal }}",
             {% endif %}
 
             {% if eob.meta.lastUpdated %}
@@ -76,7 +130,7 @@
                   {% assign ctComma = true %}
                 {% endfor %}
               ],
-              "text": "{{ eob.type.text | default: eob.type.coding[0].display | default: eob.type.coding[0].code }}"
+              "text": "{{ eob.type.text | default: eob.type.coding[0].code | default: eob.type.coding[0].display }}"
             },
             {% endif %}
 
@@ -94,7 +148,7 @@
                   {% assign cstComma = true %}
                 {% endfor %}
               ],
-              "text": "{{ eob.subType.text | default: eob.subType.coding[0].display | default: eob.subType.coding[0].code }}"
+              "text": "{{ eob.subType.text | default: eob.subType.coding[0].code | default: eob.subType.coding[0].display }}"
             },
             {% endif %}
 
@@ -130,6 +184,20 @@
             "claimPayerIdentifier": "{{ payerId }}",
             {% endif %}
 
+            {% if resolvedInsurerRes.identifier %}
+              {% assign payerIdent = resolvedInsurerRes.identifier | first %}
+            "primaryPayerIdentifier": {
+              "codings": [
+                {
+                  "system": "{{ payerIdent.system }}",
+                  "code": "{{ payerIdent.value }}",
+                  "display": "{{ resolvedInsurerRes.name | default: payerIdent.value }}"
+                }
+              ],
+              "text": "{{ resolvedInsurerRes.name | default: payerIdent.value }}"
+            },
+            {% endif %}
+
             {% assign relatedClaim = eob.related | first %}
             {% if relatedClaim.relationship %}
             "claimAdjustedRelationship": {
@@ -145,7 +213,7 @@
                   {% assign relComma = true %}
                 {% endfor %}
               ],
-              "text": "{{ relatedClaim.relationship.text | default: relatedClaim.relationship.coding[0].display | default: relatedClaim.relationship.coding[0].code }}"
+              "text": "{{ relatedClaim.relationship.text | default: relatedClaim.relationship.coding[0].code | default: relatedClaim.relationship.coding[0].display }}"
             },
             {% endif %}
             {% if relatedClaim.reference.value %}
@@ -167,7 +235,7 @@
                   {% assign ptComma = true %}
                 {% endfor %}
               ],
-              "text": "{{ eob.payee.type.text | default: eob.payee.type.coding[0].display | default: eob.payee.type.coding[0].code }}"
+              "text": "{{ eob.payee.type.text | default: eob.payee.type.coding[0].code | default: eob.payee.type.coding[0].display }}"
             },
             {% endif %}
             {% if eob.payee.party.reference %}
@@ -212,7 +280,7 @@
                       {% assign tobComma = true %}
                     {% endfor %}
                   ],
-                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                  "text": "{{ si.code.text | default: si.code.coding[0].code | default: si.code.coding[0].display }}"
                 },
                 "frequencyCode": {
                   "codings": [
@@ -227,7 +295,7 @@
                       {% assign fcComma = true %}
                     {% endfor %}
                   ],
-                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                  "text": "{{ si.code.text | default: si.code.coding[0].code | default: si.code.coding[0].display }}"
                 },
                 {% endif %}
               {% endif %}
@@ -247,7 +315,7 @@
                       {% assign poComma = true %}
                     {% endfor %}
                   ],
-                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                  "text": "{{ si.code.text | default: si.code.coding[0].code | default: si.code.coding[0].display }}"
                 },
                 {% endif %}
               {% endif %}
@@ -267,7 +335,7 @@
                       {% assign atComma = true %}
                     {% endfor %}
                   ],
-                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                  "text": "{{ si.code.text | default: si.code.coding[0].code | default: si.code.coding[0].display }}"
                 },
                 {% endif %}
               {% endif %}
@@ -287,7 +355,7 @@
                       {% assign dsComma = true %}
                     {% endfor %}
                   ],
-                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                  "text": "{{ si.code.text | default: si.code.coding[0].code | default: si.code.coding[0].display }}"
                 },
                 {% endif %}
               {% endif %}
@@ -308,7 +376,7 @@
                       {% assign drgComma = true %}
                     {% endfor %}
                   ],
-                  "text": "{{ si.code.text | default: si.code.coding[0].display | default: si.code.coding[0].code }}"
+                  "text": "{{ si.code.text | default: si.code.coding[0].code | default: si.code.coding[0].display }}"
                 },
                 {% endif %}
               {% endif %}
@@ -326,6 +394,25 @@
               {% endif %}
 
             {% endfor %}
+
+            {% assign eobFirstProc = eob.procedure | first %}
+            {% if eobFirstProc.type %}
+            "procedureCodeType": {
+              "codings": [
+                {% assign pctComma = false %}
+                {% for coding in eobFirstProc.type.coding %}
+                  {% if pctComma %},{% endif %}
+                  {
+                    "system": "{{ coding.system }}",
+                    "code": "{{ coding.code }}",
+                    "display": "{{ coding.display | default: coding.code }}"
+                  }
+                  {% assign pctComma = true %}
+                {% endfor %}
+              ],
+              "text": "{{ eobFirstProc.type.text | default: eobFirstProc.type.coding[0].code | default: eobFirstProc.type.coding[0].display }}"
+            },
+            {% endif %}
 
             {% for adj in eob.adjudication %}
               {% assign adjCode = adj.category.coding[0].code %}
@@ -345,7 +432,7 @@
                       {% assign adjrComma = true %}
                     {% endfor %}
                   ],
-                  "text": "{{ adj.reason.text | default: adj.reason.coding[0].display | default: adj.reason.coding[0].code }}"
+                  "text": "{{ adj.reason.text | default: adj.reason.coding[0].code | default: adj.reason.coding[0].display }}"
                 },
                 {% endif %}
               {% endif %}
@@ -381,7 +468,7 @@
                     {% assign tatComma = true %}
                   {% endfor %}
                 ],
-                "text": "{{ tot.category.text | default: tot.category.coding[0].display | default: tot.category.coding[0].code }}"
+                "text": "{{ tot.category.text | default: tot.category.coding[0].code | default: tot.category.coding[0].display }}"
               },
               {% if totCode == "submitted"  %}"claimTotalSubmittedAmount": "{{ tot.amount.value }}",{% endif %}
               {% if totCode == "eligible"   %}"claimTotalAllowedAmount":   "{{ tot.amount.value }}",{% endif %}
@@ -403,7 +490,7 @@
                   {% assign psComma = true %}
                 {% endfor %}
               ],
-              "text": "{{ eob.payment.type.text | default: eob.payment.type.coding[0].display | default: eob.payment.type.coding[0].code }}"
+              "text": "{{ eob.payment.type.text | default: eob.payment.type.coding[0].code | default: eob.payment.type.coding[0].display }}"
             },
             {% endif %}
             {% if eob.payment.date %}

@@ -49,7 +49,7 @@
                   "display": "{{ si.valueCoding.display | default: si.valueCoding.code }}"
                 }
               ],
-              "text": "{{ si.valueCoding.display | default: si.valueCoding.code }}"
+              "text": "{{ si.valueCoding.code | default: si.valueCoding.display }}"
             },
             {% endif %}
 
@@ -74,7 +74,7 @@
                       "display": "{{ coding.display | default: coding.code }}"
                     }
                   ],
-                  "text": "{{ coding.display | default: coding.code }}"
+                  "text": "{{ coding.code | default: coding.display }}"
                 },
                 {% break %}
                 {% endif %}
@@ -115,7 +115,7 @@
                     "display": "{{ ext.valueCoding.display | default: ext.valueCoding.code }}"
                   }
                 ],
-                "text": "{{ ext.valueCoding.display | default: ext.valueCoding.code }}"
+                "text": "{{ ext.valueCoding.code | default: ext.valueCoding.display }}"
               },
               {% break %}
               {% endif %}
@@ -138,7 +138,7 @@
                   {% assign tatComma = true %}
                 {% endfor %}
               ],
-              "text": "{{ tot.category.text | default: tot.category.coding[0].display | default: tot.category.coding[0].code }}"
+              "text": "{{ tot.category.text | default: tot.category.coding[0].code | default: tot.category.coding[0].display }}"
             },
             "totalAmount": "{{ tot.amount.value }}",
           {% endif %}

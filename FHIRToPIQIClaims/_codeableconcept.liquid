@@ -12,6 +12,6 @@
       {% assign ccComma = true %}
     {% endfor %}
   ],
-  "text": "{{ cc.text | default: cc.coding[0].display | default: cc.coding[0].code }}"
+  "text": "{{ cc.text | default: cc.coding[0].code | default: cc.coding[0].display }}"
 }
 {% endif %}

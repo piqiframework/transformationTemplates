@@ -27,7 +27,7 @@
 	  },
 	  {% endfor %}
 	],
-	{% assign textValue = reactionCode.text | default: reactionCode.coding[0].display | default: reactionCode.coding[0].code %}
+	{% assign textValue = reactionCode.text | default: reactionCode.coding[0].code | default: reactionCode.coding[0].display %}
 	"text": "{% include 'json_escape' value: textValue %}"
   },
   "severity": {
@@ -49,7 +49,7 @@
 	  },
 	  {% endfor %}
 	],
-	{% assign statusTextValue = allergy.clinicalStatus.text | default: allergy.clinicalStatus.coding[0].display | default: allergy.clinicalStatus.coding[0].code  %}
+	{% assign statusTextValue = allergy.clinicalStatus.text | default: allergy.clinicalStatus.coding[0].code | default: allergy.clinicalStatus.coding[0].display  %}
 	"text": "{% include 'json_escape' value: statusTextValue %}"
 	{% endif %}
   },
@@ -62,7 +62,7 @@
 	  },
 	  {% endfor %}
 	],
-	{% assign textValue = allergy.verificationStatus.text | default: allergy.verificationStatus.coding[0].display | default: allergy.verificationStatus.coding[0].code  %}
+	{% assign textValue = allergy.verificationStatus.text | default: allergy.verificationStatus.coding[0].code | default: allergy.verificationStatus.coding[0].display  %}
 	"text": "{% include 'json_escape' value: textValue %}"
     {% endif %}
   },
@@ -74,7 +74,7 @@
 	  },
 	  {% endfor %}
 	],
-	{% assign textValue = allergy.code.text | default: allergy.code.coding[0].display | default: allergy.code.coding[0].code  %}
+	{% assign textValue = allergy.code.text | default: allergy.code.coding[0].code | default: allergy.code.coding[0].display  %}
 	"text": "{% include 'json_escape' value: textValue %}"
   },
 },
@@ -111,7 +111,7 @@
 	  },
 	  {% endfor %}
 	],
-	{% assign statusTextValue = allergy.clinicalStatus.text | default: allergy.clinicalStatus.coding[0].display | default: allergy.clinicalStatus.coding[0].code  %}
+	{% assign statusTextValue = allergy.clinicalStatus.text | default: allergy.clinicalStatus.coding[0].code | default: allergy.clinicalStatus.coding[0].display  %}
 	"text": "{% include 'json_escape' value: statusTextValue %}"
 	{% endif %}
   },
@@ -124,7 +124,7 @@
 	  },
 	  {% endfor %}
 	],
-	{% assign textValue = allergy.verificationStatus.text | default: allergy.verificationStatus.coding[0].display | default: allergy.verificationStatus.coding[0].code  %}
+	{% assign textValue = allergy.verificationStatus.text | default: allergy.verificationStatus.coding[0].code | default: allergy.verificationStatus.coding[0].display  %}
 	"text": "{% include 'json_escape' value: textValue %}"
 	{% endif %}
   },
@@ -136,7 +136,7 @@
 	  },
 	  {% endfor %}
 	],
-    {% assign textValue = allergy.code.text | default:  allergy.code.coding[0].display | default: allergy.code.coding[0].code %}
+    {% assign textValue = allergy.code.text | default:  allergy.code.coding[0].code | default: allergy.code.coding[0].display %}
 	"text": "{% include 'json_escape' value: textValue %}"
   },
 },

@@ -11,7 +11,7 @@
         },
       {% endfor %}
     ],
-    {%- assign textValue = coverage.type.text | default: coverage.type.coding[0].display | default: coverage.type.coding[0].code -%}
+    {%- assign textValue = coverage.type.text | default: coverage.type.coding[0].code | default: coverage.type.coding[0].display -%}
     "text": "{% include 'json_escape' value: textValue %}"
   },
   "coverageStatus": {
@@ -22,7 +22,7 @@
         "display": "{{ coverage.status | capitalize }}"
       }
     ],
-    "text": "{{ coverage.status | capitalize }}"
+    "text": "{{ coverage.status }}"
   },
   {% assign group = nil %}
   {% assign plan = nil %}
@@ -62,7 +62,7 @@
         },
       {% endfor %}
     ],
-    {%- assign textValue = coverage.relationship.text | default: coverage.relationship.coding[0].display | default: coverage.relationship.coding[0].code -%}
+    {%- assign textValue = coverage.relationship.text | default: coverage.relationship.coding[0].code | default: coverage.relationship.coding[0].display -%}
     "text": "{% include 'json_escape' value: textValue %}"
   },
   "memberIdentifier": "{{ coverage.identifier[0].value }}",
@@ -74,7 +74,7 @@
         },
       {% endfor %}
     ],
-    {%- assign textValue = coverage.identifier[0].type.text | default: coverage.identifier[0].type.coding[0].display | default: coverage.identifier[0].type.coding[0].code -%}
+    {%- assign textValue = coverage.identifier[0].type.text | default: coverage.identifier[0].type.coding[0].code | default: coverage.identifier[0].type.coding[0].display -%}
     "text": "{% include 'json_escape' value: textValue %}"
   },
   {% if coverage.subscriberId == empty or coverage.subscriberId[0] %}

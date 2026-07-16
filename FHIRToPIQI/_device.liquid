@@ -19,7 +19,7 @@
             "display": "{{ device.status | capitalize }}"
           },
         ],
-        "text": "{{ device.status | capitalize }}"
+        "text": "{{ device.status }}"
         {% endif %}
       },
       {% if device.type %}
@@ -31,7 +31,7 @@
           },
           {% endfor %}
         ],
-        {%- assign deviceTypeText = device.type.text | default: device.type.coding[0].display | default: device.type.coding[0].code -%}
+        {%- assign deviceTypeText = device.type.text | default: device.type.coding[0].code | default: device.type.coding[0].display -%}
         "text": "{% include 'json_escape' value: deviceTypeText %}"
       },
       {% endif %}

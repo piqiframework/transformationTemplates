@@ -11,7 +11,7 @@
 {
 "patient": {
   {% include '_member'    eobs: eobs patient: patient -%},
-  {% include '_claim'     eobs: eobs coverages: coverages -%},
+  {% include '_claim'     eobs: eobs coverages: coverages organizations: organizations -%},
   {% include '_coverage'  eobs: eobs coverages: coverages -%},
   {% include '_provider'  eobs: eobs practitioners: practitioners organizations: organizations -%},
   {% include '_diagnosis' eobs: eobs conditions: conditions -%},

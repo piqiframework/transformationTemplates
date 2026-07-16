@@ -11,7 +11,7 @@
         {% endfor %}
       ],
       {% endif %}
-      "text": "{% include 'json_escape' value: proc.code.text %}"
+      "text": "{% include 'json_escape' value: proc.code.text | default: proc.code.coding[0].code | default: proc.code.coding[0].display %}"
     },
 
     "procedureDateTime": "{% if proc.performedDateTime %}{{ proc.performedDateTime }}{% elsif proc.performedPeriod.start %}{{ proc.performedPeriod.start }}{% endif %}",
@@ -25,7 +25,7 @@
           "display": "{{ proc.status | capitalize }}"
         }
       ],
-      "text": "{{ proc.status | capitalize }}"
+      "text": "{{ proc.status }}"
     },
     {% endif %}
 
@@ -39,7 +39,7 @@
         {% endfor %}
       ],
       {% endif %}
-      "text":  "{% include 'json_escape' value: proc.reasonCode[0].text %}"
+      "text":  "{% include 'json_escape' value: proc.reasonCode[0].text | default: proc.reasonCode[0].coding[0].code | default: proc.reasonCode[0].coding[0].display %}"
     }
 },
 {% endfor %}

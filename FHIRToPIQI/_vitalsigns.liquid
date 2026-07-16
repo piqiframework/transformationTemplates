@@ -12,7 +12,7 @@
           },
           {% endfor %}
         ],
-        {% assign compText = component.code.text | default: component.code.coding[0].display | default: component.code.coding[0].code %}
+        {% assign compText = component.code.text | default: component.code.coding[0].code | default: component.code.coding[0].display %}
         "text": "{% include 'json_escape' value: compText %}"
       },
       {% if component.dataAbsentReason %}
@@ -24,7 +24,7 @@
             },
           {% endfor %}
         ],
-        {%- assign categoryText = component.dataAbsentReason.text | default: component.dataAbsentReason.coding[0].display | default: component.dataAbsentReason.coding[0].code -%}
+        {%- assign categoryText = component.dataAbsentReason.text | default: component.dataAbsentReason.coding[0].code | default: component.dataAbsentReason.coding[0].display -%}
         "text": "{% include 'json_escape' value: categoryText %}"
       },
       {% else %}
@@ -36,7 +36,7 @@
             },
           {% endfor %}
         ],
-        {%- assign categoryText = observation.dataAbsentReason.text | default: observation.dataAbsentReason.coding[0].display | default: observation.dataAbsentReason.coding[0].code -%}
+        {%- assign categoryText = observation.dataAbsentReason.text | default: observation.dataAbsentReason.coding[0].code | default: observation.dataAbsentReason.coding[0].display -%}
         "text": "{% include 'json_escape' value: categoryText %}"
       },
       {% endif %}
@@ -48,7 +48,7 @@
             },
           {% endfor %}
         ],
-        {%- assign categoryText = observation.category[0].text | default: observation.category[0].coding[0].display | default: observation.category[0].coding[0].code -%}
+        {%- assign categoryText = observation.category[0].text | default: observation.category[0].coding[0].code | default: observation.category[0].coding[0].display -%}
         "text": "{% include 'json_escape' value: categoryText %}"
       },
       "issuedDateTime": "{{ observation.issued }}",
@@ -62,7 +62,7 @@
 			},
 		  {% endfor %}
 		],
-		{% assign interpretationText = observation.interpretation[0].text | default: observation.interpretation[0].coding[0].display | default: observation.interpretation[0].coding[0].code %}
+		{% assign interpretationText = observation.interpretation[0].text | default: observation.interpretation[0].coding[0].code | default: observation.interpretation[0].coding[0].display %}
 	    "text": "{% include 'json_escape' value: interpretationText %}"
 	  },
       "resultStatus": {
@@ -73,7 +73,7 @@
 			"display": "{{ observation.status | capitalize }}"      
 		  }
 		],
-		"text": "{{ observation.status | capitalize }}"
+		"text": "{{ observation.status }}"
 	  },
       {% include '_resultValue' component: component -%}
 	},
@@ -88,7 +88,7 @@
       },
       {% endfor %}
     ],
-    {% assign textValue = observation.code.text | default: observation.code.coding[0].display | default: observation.code.coding[0].code %}
+    {% assign textValue = observation.code.text | default: observation.code.coding[0].code | default: observation.code.coding[0].display %}
     "text": "{% include 'json_escape' value: textValue %}"
   },
   "dataAbsentReason": {
@@ -99,7 +99,7 @@
         },
       {% endfor %}
     ],
-    {%- assign categoryText = observation.dataAbsentReason.text | default: observation.dataAbsentReason.coding[0].display | default: observation.dataAbsentReason.coding[0].code -%}
+    {%- assign categoryText = observation.dataAbsentReason.text | default: observation.dataAbsentReason.coding[0].code | default: observation.dataAbsentReason.coding[0].display -%}
     "text": "{% include 'json_escape' value: categoryText %}"
   },
   "vitalSignCategory": {
@@ -110,7 +110,7 @@
         },
       {% endfor %}
     ],
-    {%- assign categoryText = observation.category[0].text | default: observation.category[0].coding[0].display | default: observation.category[0].coding[0].code -%}
+    {%- assign categoryText = observation.category[0].text | default: observation.category[0].coding[0].code | default: observation.category[0].coding[0].display -%}
     "text": "{% include 'json_escape' value: categoryText %}"
   },
   "performedDateTime": "{{ observation.effectiveDateTime ?? observation.effectivePeriod?.start }}",
@@ -124,7 +124,7 @@
 		},
 	  {% endfor %}
 	],
-	{% assign interpretationText = observation.interpretation[0].text | default: observation.interpretation[0].coding[0].display | default: observation.interpretation[0].coding[0].code %}
+	{% assign interpretationText = observation.interpretation[0].text | default: observation.interpretation[0].coding[0].code | default: observation.interpretation[0].coding[0].display %}
 	"text": "{% include 'json_escape' value: interpretationText %}"
   },
   "resultStatus": {
@@ -135,7 +135,7 @@
 		"display": "{{ observation.status | capitalize }}"      
 	  }
 	],
-	"text": "{{ observation.status | capitalize }}"
+	"text": "{{ observation.status }}"
   },
   {% include '_resultValue' component: observation -%}
 },

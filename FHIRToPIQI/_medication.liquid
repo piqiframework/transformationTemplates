@@ -34,7 +34,7 @@
 		    },
 		  {% endfor %}
 		],
-        {% assign textValue = med_resource.code.text | default: med_resource.code.coding[0].display | default: med_resource.code.coding[0].code %}
+        {% assign textValue = med_resource.code.text | default: med_resource.code.coding[0].code | default: med_resource.code.coding[0].display %}
 		"text": "{% include 'json_escape' value: textValue %}",
 	  {% else %}
 	    {% if med.medicationReference.identifier %}
@@ -61,7 +61,7 @@
             },
           {% endfor %}
         ],
-        {% assign textValue = med.medicationCodeableConcept.text | default: med.medicationCodeableConcept.coding[0].display | default: med.medicationCodeableConcept.coding[0].code %}
+        {% assign textValue = med.medicationCodeableConcept.text | default: med.medicationCodeableConcept.coding[0].code | default: med.medicationCodeableConcept.coding[0].display %}
         "text": "{% include 'json_escape' value: textValue %}"
 	  {% endif %}
 	  {% if med.code %}
@@ -72,7 +72,7 @@
             },
           {% endfor %}
         ],
-        {% assign textValue = med.code.text | default: med.code.coding[0].display | default: med.code.coding[0].code %}
+        {% assign textValue = med.code.text | default: med.code.coding[0].code | default: med.code.coding[0].display %}
         "text": "{% include 'json_escape' value: textValue %}"
 	  {% endif %}
     },
@@ -84,7 +84,7 @@
           },
         {% endfor %}
       ],
-      {%- assign medText = med.category[0].text | default: med.category[0].coding[0].display | default: med.category[0].coding[0].code -%}
+      {%- assign medText = med.category[0].text | default: med.category[0].coding[0].code | default: med.category[0].coding[0].display -%}
       "text": "{% include 'json_escape' value: medText %}"
     },
     {% if med.intent %}
@@ -96,7 +96,7 @@
           "display": "{{ med.intent | capitalize }}"
         },
       ],
-      "text": "{{ med.intent | capitalize }}"
+      "text": "{{ med.intent }}"
     },
     {% endif %}
 
@@ -227,7 +227,7 @@
           },
         {% endfor %}
       ],
-      {% assign routeText = route.text | default: route.coding[0].display | default: route.coding[0].code %}
+      {% assign routeText = route.text | default: route.coding[0].code | default: route.coding[0].display %}
       "text": "{{ routeText }}"
 	  {% elsif med.dosage.size > 0 and med.dosage[0].route %}
 	   {% assign route = med.dosage[0].route %}
@@ -238,7 +238,7 @@
         },
       {% endfor %}
       ],
-      {% assign routeText = route.text | default: route.coding[0].display | default: route.coding[0].code %}
+      {% assign routeText = route.text | default: route.coding[0].code | default: route.coding[0].display %}
       "text": "{{ routeText }}"
 	  {% elsif med.dosage.route.coding %}
        "codings": [
@@ -248,7 +248,7 @@
         },
       {% endfor %}
       ],
-      {% assign routeText = med.dosage.route.text | default: med.dosage.route.coding[0].display | default: med.dosage.route.coding[0].code %}
+      {% assign routeText = med.dosage.route.text | default: med.dosage.route.coding[0].code | default: med.dosage.route.coding[0].display %}
       "text": "{{ routeText }}"
 	  {% endif %}
     },
@@ -298,7 +298,7 @@
             },
           {% endfor %}
         ],
-        {% assign adherenceText = med.statusReason.text | default: med.statusReason.coding[0].display | default: med.statusReason.coding[0].code %}
+        {% assign adherenceText = med.statusReason.text | default: med.statusReason.coding[0].code | default: med.statusReason.coding[0].display %}
         "text": "{% include 'json_escape' value: adherenceText %}"
       {% endif %}
     },
@@ -314,7 +314,7 @@
                 },
               {% endfor %}
             ],
-            {% assign indicationText = rc.text | default: rc.coding[0].display | default: rc.coding[0].code %}
+            {% assign indicationText = rc.text | default: rc.coding[0].code | default: rc.coding[0].display %}
             "text":  "{% include 'json_escape' value: indicationText %}"
           {% endif %}
         },

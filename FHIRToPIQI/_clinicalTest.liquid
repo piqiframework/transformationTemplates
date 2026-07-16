@@ -10,7 +10,7 @@
             },
           {% endfor %}
         ],
-        {% assign textValue = test.code.text | default: test.code.coding[0].display | default: test.code.coding[0].code %}
+        {% assign textValue = test.code.text | default: test.code.coding[0].code | default: test.code.coding[0].display %}
         "text": "{% include 'json_escape' value: textValue %}"
       },
       "testDataAbsentReason": {
@@ -21,7 +21,7 @@
             },
           {% endfor %}
         ],
-        {% assign textValue = test.dataAbsentReason.text | default: test.dataAbsentReason.coding[0].display | default: test.dataAbsentReason.coding[0].code %}
+        {% assign textValue = test.dataAbsentReason.text | default: test.dataAbsentReason.coding[0].code | default: test.dataAbsentReason.coding[0].display %}
         "text": "{% include 'json_escape' value: textValue %}"
       },
       {% if test.valueAttachment %}
@@ -54,7 +54,7 @@
             },
           {% endfor %}
         ],
-        {%- assign categoryText =  test.category[0].text | default: test.category[0].coding[0].display | default: test.category[0].coding[0].code -%}
+        {%- assign categoryText =  test.category[0].text | default: test.category[0].coding[0].code | default: test.category[0].coding[0].display -%}
         "text": "{% include 'json_escape' value: categoryText %}"
       },
 
@@ -72,7 +72,7 @@
                 },
               {% endfor %}
             ],
-            {%- assign componentText = component.code.text | default: component.code.coding[0].display | default: component.code.coding[0].code -%}
+            {%- assign componentText = component.code.text | default: component.code.coding[0].code | default: component.code.coding[0].display -%}
             "text": "{% include 'json_escape' value: componentText %}"
           },
           {% assign dataAbsentReason = component.dataAbsentReason | default: test.dataAbsentReason %}
@@ -84,7 +84,7 @@
                 },
               {% endfor %}
             ],
-            {% assign textValue = dataAbsentReason.text | default: dataAbsentReason.coding[0].display | default: dataAbsentReason.coding[0].code %}
+            {% assign textValue = dataAbsentReason.text | default: dataAbsentReason.coding[0].code | default: dataAbsentReason.coding[0].display %}
             "text": "{% include 'json_escape' value: textValue %}"
           },
           {% if test.valueAttachment %}
@@ -117,7 +117,7 @@
                 },
               {% endfor %}
             ],
-            {%- assign categoryText =  test.category[0].text | default: test.category[0].coding[0].display | default: test.category[0].coding[0].code -%}
+            {%- assign categoryText =  test.category[0].text | default: test.category[0].coding[0].code | default: test.category[0].coding[0].display -%}
             "text": "{% include 'json_escape' value: categoryText %}"
           },
 

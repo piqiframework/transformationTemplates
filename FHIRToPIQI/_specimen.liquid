@@ -15,7 +15,7 @@
 				  }{% unless forloop.last %},{% endunless %}
 				{% endfor %}
 			  ],
-			  {% assign typeText = specimen.type.text | default: specimen.type.coding[0].display | default: specimen.type.coding[0].code %}
+			  {% assign typeText = specimen.type.text | default: specimen.type.coding[0].code | default: specimen.type.coding[0].display %}
 			  "text": "{{ typeText }}"
 			},
 		  {% endif %}
@@ -42,7 +42,7 @@
 				  }{% unless forloop.last %},{% endunless %}
 				{% endfor %}
 			  ],
-			  {% assign conditionText = firstCondition.text | default: firstCondition.coding[0].display | default: firstCondition.coding[0].code %}
+			  {% assign conditionText = firstCondition.text | default: firstCondition.coding[0].code | default: firstCondition.coding[0].display %}
               "text": "{% include 'json_escape' value: conditionText %}"
 			},
 		  {% endif %}
@@ -55,7 +55,7 @@
 				  }{% unless forloop.last %},{% endunless %}
 				{% endfor %}
 			  ],
-			  {% assign bodySiteText = specimen.collection.bodySite.text | default: specimen.collection.bodySite.coding[0].display | default: specimen.collection.bodySite.coding[0].code %}
+			  {% assign bodySiteText = specimen.collection.bodySite.text | default: specimen.collection.bodySite.coding[0].code | default: specimen.collection.bodySite.coding[0].display %}
               "text": "{% include 'json_escape' value: bodySiteText %}"
 			},
 		  {% endif %}

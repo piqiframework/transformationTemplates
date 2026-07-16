@@ -9,7 +9,7 @@
           },
           {% endfor %}
         ],
-        {%- assign reportCodeText =  report.code.text | default: report.code.coding[0].display | default: report.code.coding[0].code -%}
+        {%- assign reportCodeText =  report.code.text | default: report.code.coding[0].code | default: report.code.coding[0].display -%}
         "text": "{% include 'json_escape' value: reportCodeText %}"
       },
       {%- assign performerId =  report.performer[0].identifier.value | default: report.performer[0].reference -%}
@@ -23,7 +23,7 @@
           },
           {% endfor %}
         ],
-         {%- assign categoryText =  report.category[0].text | default: report.category[0].coding[0].display | default: report.category[0].coding[0].code -%}
+         {%- assign categoryText =  report.category[0].text | default: report.category[0].coding[0].code | default: report.category[0].coding[0].display -%}
         "text": "{% include 'json_escape' value: categoryText %}"
       },
 	  "interpretation": "{{ report.conclusion }}",
@@ -46,7 +46,7 @@
         {% endfor %}
       ],
       {% endif %}
-      {%- assign conclusionText = conclusionCode.text | default: conclusionCodings[0].display | default: conclusionCodings[0].code -%}
+      {%- assign conclusionText = conclusionCode.text | default: conclusionCodings[0].code | default: conclusionCodings[0].display -%}
       "conclusionText": "{% include 'json_escape' value: conclusionText %}",
       "reportStatus": {
         "codings": [
@@ -72,7 +72,7 @@
                   },
                   {% endfor %}
                 ],
-                {% assign absentReasonText = obs.dataAbsentReason.text | default: obs.dataAbsentReason.coding[0].display | default: obs.dataAbsentReason.coding[0].code %}
+                {% assign absentReasonText = obs.dataAbsentReason.text | default: obs.dataAbsentReason.coding[0].code | default: obs.dataAbsentReason.coding[0].display %}
                 "text": "{% include 'json_escape' value: absentReasonText %}"
               },
             {% endif %}

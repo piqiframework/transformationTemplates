@@ -12,7 +12,7 @@
 	  },
 	  {% endfor %}
 	],
-	{%- assign typeText = claim.type.text | default: claim.type.coding[0].display | default: claim.type.coding[0].code -%}
+	{%- assign typeText = claim.type.text | default: claim.type.coding[0].code | default: claim.type.coding[0].display -%}
 	"text": "{% include 'json_escape' value: typeText %}"
   },
   {% if claim.patient %}
@@ -52,7 +52,7 @@
 		  },
 		  {% endfor %}
 		],
-		{%- assign diagText = diag.diagnosisCodeableConcept.text | default: diag.diagnosisCodeableConcept.coding[0].display | default: diag.diagnosisCodeableConcept.coding[0].code -%}
+		{%- assign diagText = diag.diagnosisCodeableConcept.text | default: diag.diagnosisCodeableConcept.coding[0].code | default: diag.diagnosisCodeableConcept.coding[0].display -%}
 		"text": "{% include 'json_escape' value: diagText %}"
 	  }
 	}{% unless forloop.last %},{% endunless %}
@@ -72,7 +72,7 @@
 		  },
 		  {% endfor %}
 		],
-		{%- assign itemText = item.productOrService.text | default: item.productOrService.coding[0].display | default: item.productOrService.coding[0].code -%}
+		{%- assign itemText = item.productOrService.text | default: item.productOrService.coding[0].code | default: item.productOrService.coding[0].display -%}
 		"text": "{% include 'json_escape' value: itemText %}"
 	  },
 	  {% if item.unitPrice %}

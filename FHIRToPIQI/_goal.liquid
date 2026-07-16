@@ -9,10 +9,10 @@
           },
        {% endfor %}
 	],
-	"text": "{% include 'json_escape' value: goal.description.text | default: goal.description.coding[0].display | default: goal.description.coding[0].code %}"
+	"text": "{% include 'json_escape' value: goal.description.text | default: goal.description.coding[0].code | default: goal.description.coding[0].display %}"
 	},
 	"effectiveDate": "{{goal.statusDate | default: goal.startDate | default: goal.startDateTime}}",
-	"goalPriority": "{{ goal.priority.text | default: goal.priority.coding[0].display | default: goal.priority.coding[0].code }}",
+	"goalPriority": "{{ goal.priority.text | default: goal.priority.coding[0].code | default: goal.priority.coding[0].display }}",
       {% if goal.lifecycleStatus %}
       "goalStatus": "{{ goal.lifecycleStatus }}",
       {% endif %}
@@ -25,7 +25,7 @@
           }{% unless forloop.last %},{% endunless %}
           {% endfor %}
         ],
-        "text": "{{ goal.achievementStatus.text | default: goal.achievementStatus.coding[0].display | default: goal.achievementStatus.coding[0].code }}"
+        "text": "{{ goal.achievementStatus.text | default: goal.achievementStatus.coding[0].code | default: goal.achievementStatus.coding[0].display }}"
       },
       {% endif %}
       {% if goal.category %}
@@ -37,7 +37,7 @@
             }{% unless forloop.last %},{% endunless %}
           {% endfor %}
         ],
-        "text": "{{ goal.category[0].text | default: goal.category[0].coding[0].display | default: goal.category[0].coding[0].code }}"
+        "text": "{{ goal.category[0].text | default: goal.category[0].coding[0].code | default: goal.category[0].coding[0].display }}"
       },
       {% endif %}
       {% if goal.description %}

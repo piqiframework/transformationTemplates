@@ -23,7 +23,7 @@
               {% assign pccComma = true %}
             {% endfor %}
           ],
-          "text": "{{ procCC.text | default: procCC.coding[0].display | default: procCC.coding[0].code }}"
+          "text": "{{ procCC.text | default: procCC.coding[0].code | default: procCC.coding[0].display }}"
         },
         {% endif %}
 
@@ -42,7 +42,7 @@
               {% assign pptComma = true %}
             {% endfor %}
           ],
-          "text": "{{ procType.text | default: procType.coding[0].display | default: procType.coding[0].code }}"
+          "text": "{{ procType.text | default: procType.coding[0].code | default: procType.coding[0].display }}"
         },
         {% endif %}
 
@@ -78,25 +78,25 @@
             {% if item.modifier[0] %}
             "modifierCode1": {
               "codings": [{% for c in item.modifier[0].coding %}{"system":"{{ c.system }}","code":"{{ c.code }}","display":"{{ c.display | default: c.code }}"}{% unless forloop.last %},{% endunless %}{% endfor %}],
-              "text": "{{ item.modifier[0].text | default: item.modifier[0].coding[0].display | default: item.modifier[0].coding[0].code }}"
+              "text": "{{ item.modifier[0].text | default: item.modifier[0].coding[0].code | default: item.modifier[0].coding[0].display }}"
             },
             {% endif %}
             {% if item.modifier[1] %}
             "modifierCode2": {
               "codings": [{% for c in item.modifier[1].coding %}{"system":"{{ c.system }}","code":"{{ c.code }}","display":"{{ c.display | default: c.code }}"}{% unless forloop.last %},{% endunless %}{% endfor %}],
-              "text": "{{ item.modifier[1].text | default: item.modifier[1].coding[0].display | default: item.modifier[1].coding[0].code }}"
+              "text": "{{ item.modifier[1].text | default: item.modifier[1].coding[0].code | default: item.modifier[1].coding[0].display }}"
             },
             {% endif %}
             {% if item.modifier[2] %}
             "modifierCode3": {
               "codings": [{% for c in item.modifier[2].coding %}{"system":"{{ c.system }}","code":"{{ c.code }}","display":"{{ c.display | default: c.code }}"}{% unless forloop.last %},{% endunless %}{% endfor %}],
-              "text": "{{ item.modifier[2].text | default: item.modifier[2].coding[0].display | default: item.modifier[2].coding[0].code }}"
+              "text": "{{ item.modifier[2].text | default: item.modifier[2].coding[0].code | default: item.modifier[2].coding[0].display }}"
             },
             {% endif %}
             {% if item.modifier[3] %}
             "modifierCode4": {
               "codings": [{% for c in item.modifier[3].coding %}{"system":"{{ c.system }}","code":"{{ c.code }}","display":"{{ c.display | default: c.code }}"}{% unless forloop.last %},{% endunless %}{% endfor %}],
-              "text": "{{ item.modifier[3].text | default: item.modifier[3].coding[0].display | default: item.modifier[3].coding[0].code }}"
+              "text": "{{ item.modifier[3].text | default: item.modifier[3].coding[0].code | default: item.modifier[3].coding[0].display }}"
             },
             {% endif %}
             {% break %}

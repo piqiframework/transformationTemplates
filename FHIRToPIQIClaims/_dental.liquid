@@ -61,7 +61,7 @@
                 {% assign dpcComma = true %}
               {% endfor %}
             ],
-            "text": "{{ item.productOrService.text | default: item.productOrService.coding[0].display | default: item.productOrService.coding[0].code }}"
+            "text": "{{ item.productOrService.text | default: item.productOrService.coding[0].code | default: item.productOrService.coding[0].display }}"
           },
           {% endif %}
 
@@ -75,7 +75,7 @@
                 {% assign dpmComma = true %}
               {% endfor %}
             ],
-            "text": "{{ item.modifier[0].text | default: item.modifier[0].coding[0].display | default: item.modifier[0].coding[0].code }}"
+            "text": "{{ item.modifier[0].text | default: item.modifier[0].coding[0].code | default: item.modifier[0].coding[0].display }}"
           },
           {% endif %}
 
@@ -89,7 +89,7 @@
                 {% assign t1Comma = true %}
               {% endfor %}
             ],
-            "text": "{{ item.bodySite.text | default: item.bodySite.coding[0].display | default: item.bodySite.coding[0].code }}"
+            "text": "{{ item.bodySite.text | default: item.bodySite.coding[0].code | default: item.bodySite.coding[0].display }}"
           },
           {% endif %}
 
@@ -104,7 +104,7 @@
                 {% assign tsComma = true %}
               {% endfor %}
             ],
-            "text": "{{ toothSurface.text | default: toothSurface.coding[0].display | default: toothSurface.coding[0].code }}"
+            "text": "{{ toothSurface.text | default: toothSurface.coding[0].code | default: toothSurface.coding[0].display }}"
           },
           {% endif %}
         }

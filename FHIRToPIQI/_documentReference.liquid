@@ -18,7 +18,7 @@
 	  },
 	  {% endfor %}
 	],
-	{%- assign docTypeText = doc.type.text | default: doc.type.coding[0].display | default: doc.type.coding[0].code -%}
+	{%- assign docTypeText = doc.type.text | default: doc.type.coding[0].code | default: doc.type.coding[0].display -%}
 	"text": "{% include 'json_escape' value: docTypeText %}"
   },
   {% endif %}
@@ -28,7 +28,7 @@
 		{% include '_codableconcept' coding: doc.content[0].format -%}
       }
     ],
-    "text": "{{ doc.content[0].format.display | default: doc.content[0].format.code }}"
+    "text": "{{ doc.content[0].format.code | default: doc.content[0].format.display }}"
   },
   {% if doc.category[0] %}
   "documentCategory": 
@@ -40,7 +40,7 @@
 		},
 		{% endfor %}
 	  ],
-	  {%- assign catText = doc.category[0].text | default: doc.category[0].coding[0].display | default: doc.category[0].coding[0].code -%}
+	  {%- assign catText = doc.category[0].text | default: doc.category[0].coding[0].code | default: doc.category[0].coding[0].display -%}
 	  "text": "{% include 'json_escape' value: catText %}"
 	},
   {% endif %}

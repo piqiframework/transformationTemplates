@@ -10,7 +10,7 @@
             },
           {% endfor %}
         ],
-        {% assign textValue = entry.code.text | default: entry.code.coding[0].display %}
+        {% assign textValue = entry.code.text | default: entry.code.coding[0].code | default: entry.code.coding[0].display %}
         "text": "{% include 'json_escape' value: textValue %}"
       },
       "issuedDateTime": "{{ entry.issued }}",
@@ -45,7 +45,7 @@
             },
           {% endfor %}
         ],
-        {%- assign categoryText =  entry.category[0].text | default: entry.category[0].coding[0].display | default: entry.category[0].coding[0].code -%}
+        {%- assign categoryText =  entry.category[0].text | default: entry.category[0].coding[0].code | default: entry.category[0].coding[0].display -%}
         "text": "{% include 'json_escape' value: categoryText %}"
       },
 
@@ -63,7 +63,7 @@
                 },
               {% endfor %}
             ],
-            {%- assign componentText = component.code.text | default: component.code.coding[0].display | default: component.code.coding[0].code -%}
+            {%- assign componentText = component.code.text | default: component.code.coding[0].code | default: component.code.coding[0].display -%}
             "text": "{% include 'json_escape' value: componentText %}"
           },
           "issuedDateTime": "{{ entry.issued }}",
@@ -98,7 +98,7 @@
                 },
               {% endfor %}
             ],
-             {%- assign categoryText =  entry.category[0].text | default: entry.category[0].coding[0].display | default: entry.category[0].coding[0].code -%}
+             {%- assign categoryText =  entry.category[0].text | default: entry.category[0].coding[0].code | default: entry.category[0].coding[0].display -%}
             "text": "{% include 'json_escape' value: categoryText %}"
           },
 

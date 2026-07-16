@@ -26,7 +26,7 @@
   "text": "{% include 'json_escape' value: component.valueString %}"
  },
 {% elsif component.valueCodeableConcept %}
- {% assign textValue = component.valueCodeableConcept.text | default: component.valueCodeableConcept.coding[0].display | default: component.valueCodeableConcept.coding[0].code %}
+ {% assign textValue = component.valueCodeableConcept.text | default: component.valueCodeableConcept.coding[0].code | default: component.valueCodeableConcept.coding[0].display %}
  {% if component.valueCodeableConcept.coding.size > 0 or textValue %}
  "{{ resValueName }}":{
   "type":{ "text": "CE"},

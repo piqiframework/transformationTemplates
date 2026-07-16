@@ -80,7 +80,7 @@
       {% for role in practitionerRoles %}
         {% if role.practitioner.reference == targetRoleRef1 or role.practitioner.reference == targetRoleRef2 %}
           {% assign foundRole = role %}
-          {% assign roleText = role.code[0].text | default: role.code[0].coding[0].display | default: role.code[0].coding[0].code | default: "" %}
+          {% assign roleText = role.code[0].text | default: role.code[0].coding[0].code | default: role.code[0].coding[0].display | default: "" %}
           {% break %}
         {% endif %}
       {% endfor %}

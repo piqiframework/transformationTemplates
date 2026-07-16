@@ -53,7 +53,7 @@
 	  "display": "{{ msg.gender | capitalize }}"
     }
   ],
-  "text": "{{ msg.gender | capitalize }}"
+  "text": "{{ msg.gender }}"
   {% else %}
   {% assign birth_sex_code = birth_sex_ext.valueCode %}
   {% assign birth_sex_text = "" %}
@@ -107,7 +107,7 @@
             },
           {% endfor %}
         ],
-        {% assign genderText = gender_ext.valueCodeableConcept.text | default: gender_ext.valueCodeableConcept.coding[0].display | default: gender_ext.valueCodeableConcept.coding[0].code %}
+        {% assign genderText = gender_ext.valueCodeableConcept.text | default: gender_ext.valueCodeableConcept.coding[0].code | default: gender_ext.valueCodeableConcept.coding[0].display %}
         "text": "{{ genderText }}"
       {% endif %}
     },
@@ -120,7 +120,7 @@
             },
           {% endfor %}
         ],
-        {% assign maritalText = msg.maritalStatus.text | default: msg.maritalStatus.coding[0].display | default: msg.maritalStatus.coding[0].code %}
+        {% assign maritalText = msg.maritalStatus.text | default: msg.maritalStatus.coding[0].code | default: msg.maritalStatus.coding[0].display %}
         "text": "{{ maritalText }}"
       {% endif %}
     },
@@ -134,7 +134,7 @@
             },
           {% endfor %}
         ],
-        {% assign langText = lang_ext.text | default: lang_ext.coding[0].display | default: lang_ext.coding[0].code %}
+        {% assign langText = lang_ext.text | default: lang_ext.coding[0].code | default: lang_ext.coding[0].display %}
         "text": "{{ langText }}"
       {% endif %}
     },
@@ -164,7 +164,7 @@
               },
             {% endfor %}
           ],
-          {% assign orientationText = obs.valueCodeableConcept.text | default: obs.valueCodeableConcept.coding[0].display | default: obs.valueCodeableConcept.coding[0].code %}
+          {% assign orientationText = obs.valueCodeableConcept.text | default: obs.valueCodeableConcept.coding[0].code | default: obs.valueCodeableConcept.coding[0].display %}
           "text": "{{ orientationText }}"
         },
         {% break %}
@@ -180,7 +180,7 @@
             },
           {% endfor %}
         ],
-        {% assign tribalText = tribalCCExt.valueCodeableConcept.text | default: tribalCCExt.valueCodeableConcept.coding[0].display | default: tribalCCExt.valueCodeableConcept.coding[0].code %}
+        {% assign tribalText = tribalCCExt.valueCodeableConcept.text | default: tribalCCExt.valueCodeableConcept.coding[0].code | default: tribalCCExt.valueCodeableConcept.coding[0].display %}
         "text": "{{ tribalText }}"
     }
 },

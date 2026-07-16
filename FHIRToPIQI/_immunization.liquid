@@ -25,7 +25,7 @@
 	  }{% unless forloop.last %},{% endunless %}
 	  {% endfor %}
 	],
-	"text": "{% include 'json_escape' value: immunization.vaccineCode.text | default: immunization.vaccineCode.coding[0].display | default: immunization.vaccineCode.coding[0].code %}"
+	"text": "{% include 'json_escape' value: immunization.vaccineCode.text | default: immunization.vaccineCode.coding[0].code | default: immunization.vaccineCode.coding[0].display %}"
   },
   "immunizationStatus": {
     "codings": [
@@ -35,7 +35,7 @@
         "display": "{{ immunization.status | capitalize }}"      
       }
     ],
-    "text": "{{ immunization.status | capitalize }}"
+    "text": "{{ immunization.status }}"
   },
   "immunizationStatusReason": {
     "codings": [
@@ -45,7 +45,7 @@
         },
       {% endfor %}
     ],
-    {%- assign reasonText =  immunization.statusReason.text | default: immunization.statusReason.coding[0].display | default: immunization.statusReason.coding[0].code -%}
+    {%- assign reasonText =  immunization.statusReason.text | default: immunization.statusReason.coding[0].code | default: immunization.statusReason.coding[0].display -%}
     "text": "{% include 'json_escape' value: reasonText %}"
   },
 },

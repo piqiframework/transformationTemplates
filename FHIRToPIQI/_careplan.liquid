@@ -31,7 +31,7 @@
             },
             {% endfor %}
           ],
-          {%- assign catText = plan.category[0].text | default: plan.category[0].coding[0].display | default: plan.category[0].coding[0].code -%}
+          {%- assign catText = plan.category[0].text | default: plan.category[0].coding[0].code | default: plan.category[0].coding[0].display -%}
           "text": "{% include 'json_escape' value: catText %}"
         },
       {% endif %}

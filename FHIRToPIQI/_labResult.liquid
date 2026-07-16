@@ -12,7 +12,7 @@
 				  }{% unless forloop.last %},{% endunless %}
 				{% endfor %}
 			  ],
-			  {% assign textValue = entry.code.text | default: entry.code.coding[0].display | default: entry.code.coding[0].code %}
+			  {% assign textValue = entry.code.text | default: entry.code.coding[0].code | default: entry.code.coding[0].display %}
 			  "text": "{% include 'json_escape' value: textValue %}"
 			},
 		    "test": {
@@ -23,7 +23,7 @@
 				  }{% unless forloop.last %},{% endunless %}
 			    {% endfor %}
 			  ],
-			  "text": "{% include 'json_escape' value: component.code.text | default: component.code.coding[0].display | default: component.code.coding[0].code %}"
+			  "text": "{% include 'json_escape' value: component.code.text | default: component.code.coding[0].code | default: component.code.coding[0].display %}"
 			},
 			"labCategory": {
 			  "codings": [
@@ -33,7 +33,7 @@
 				  },
 			    {% endfor %}
 			  ],
-			  {% assign categoryText = entry.category[0].text | default: entry.category[0].coding[0].display | default: entry.category[0].coding[0].code %}
+			  {% assign categoryText = entry.category[0].text | default: entry.category[0].coding[0].code | default: entry.category[0].coding[0].display %}
 			  "text": "{% include 'json_escape' value: categoryText %}"
 			},
 			{%- assign performerId =  entry.performer[0].identifier.value | default: entry.performer[0].reference -%}
@@ -61,14 +61,14 @@
 				    {% include '_codableconcept' coding: performingSiteRefOrg -%}
 				  }
 			    ],
-			    "text": "{% include 'json_escape' value: performingSiteTypeOrg.display | default: performingSiteTypeOrg.code %}"
+			    "text": "{% include 'json_escape' value: performingSiteTypeOrg.code | default: performingSiteTypeOrg.display %}"
 		      {% elsif performingSiteRefOrg %}
 			    "codings": [
 		    	  {
 				    {% include '_codableconcept' coding: performingSiteRefOrg -%}
 				  }
 			    ],
-			    "text": "{% include 'json_escape' value: performingSiteRefOrg.display | default: performingSiteRefOrg.code %}"
+			    "text": "{% include 'json_escape' value: performingSiteRefOrg.code | default: performingSiteRefOrg.display %}"
 			  {% endif %}
 		    },
 			"referenceRange": "{% include 'json_escape' value: entry.referenceRange[0].text %}",
@@ -80,7 +80,7 @@
 				  },
 			    {% endfor %}
 			  ],
-			  {% assign interpretationText = entry.interpretation[0].text | default: entry.interpretation[0].coding[0].display | default: entry.interpretation[0].coding[0].code %}
+			  {% assign interpretationText = entry.interpretation[0].text | default: entry.interpretation[0].coding[0].code | default: entry.interpretation[0].coding[0].display %}
 			  "text": "{% include 'json_escape' value: interpretationText %}"
 			},
 		    "resultStatus": {
@@ -91,7 +91,7 @@
 				  "display": "{{ entry.status | capitalize }}"      
 			    }
 			  ],
-			  "text": "{{ entry.status | capitalize }}"
+			  "text": "{{ entry.status }}"
 		    },
 		    {% include '_resultValue' component: component %}
 		  },
@@ -112,7 +112,7 @@
 				        },
 				      {% endfor %}
 				    ],
-				    {% assign textValue = report.code.text | default: report.code.coding[0].display | default: report.code.coding[0].code %}
+				    {% assign textValue = report.code.text | default: report.code.coding[0].code | default: report.code.coding[0].display %}
 				    "text": "{% include 'json_escape' value: textValue %}"
 			      },
 				  "orderDate": "{{ report.issued }}",
@@ -128,7 +128,7 @@
 			    }{% unless forloop.last %},{% endunless %}
 			  {% endfor %}
 		    ],
-		    {% assign textValue = entry.code.text | default: entry.code.coding[0].display | default: entry.code.coding[0].code %}
+		    {% assign textValue = entry.code.text | default: entry.code.coding[0].code | default: entry.code.coding[0].display %}
 		    "text": "{% include 'json_escape' value: textValue %}"
 		  },
 		  "labCategory": {
@@ -139,7 +139,7 @@
 				},
 			  {% endfor %}
 			],
-			{% assign categoryText = entry.category[0].text | default: entry.category[0].coding[0].display | default: entry.category[0].coding[0].code %}
+			{% assign categoryText = entry.category[0].text | default: entry.category[0].coding[0].code | default: entry.category[0].coding[0].display %}
 			"text": "{% include 'json_escape' value: categoryText %}"
 		  },
 		  {%- assign performerId =  entry.performer[0].identifier.value | default: entry.performer[0].reference -%}
@@ -165,14 +165,14 @@
 				  {% include '_codableconcept' coding: performingSiteTypeOrg -%}
 				}
 			  ],
-			  "text": "{% include 'json_escape' value: performingSiteTypeOrg.display | default: performingSiteTypeOrg.code %}"
+			  "text": "{% include 'json_escape' value: performingSiteTypeOrg.code | default: performingSiteTypeOrg.display %}"
 		    {% elsif performingSiteRefOrg %}
 			  "codings": [
 		    	{
 				  {% include '_codableconcept' coding: performingSiteRefOrg -%}
 				}
 			  ],
-			  "text": "{% include 'json_escape' value: performingSiteRefOrg.display | default: performingSiteRefOrg.code %}"
+			  "text": "{% include 'json_escape' value: performingSiteRefOrg.code | default: performingSiteRefOrg.display %}"
 			{% endif %}
 		  },
 		  "referenceRange": "{{ entry.referenceRange[0].text }}",
@@ -184,7 +184,7 @@
 				},
 			  {% endfor %}
 			],
-			{% assign interpretationText = entry.interpretation[0].text | default: entry.interpretation[0].coding[0].display | default: entry.interpretation[0].coding[0].code %}
+			{% assign interpretationText = entry.interpretation[0].text | default: entry.interpretation[0].coding[0].code | default: entry.interpretation[0].coding[0].display %}
 			"text": "{% include 'json_escape' value: interpretationText %}"
 		  },
 		  "resultStatus": {
@@ -195,7 +195,7 @@
 				"display": "{{ entry.status | capitalize }}"      
 			  }
 			],
-			"text": "{{ entry.status | capitalize }}"
+			"text": "{{ entry.status }}"
 		  },
 		  {% include '_resultValue' component: entry %}
 		  {% if specimens.size > 0 %}
