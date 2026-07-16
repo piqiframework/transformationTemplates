@@ -6,8 +6,7 @@
   {% assign membId = eob.patient.reference %}
 {% endunless %}
 
-"member": [
-  {
+"member": {
     {% comment %} MEMB_ID {% endcomment %}
     {% if membId %}
     "memberId": "{{ membId }}",
@@ -194,4 +193,3 @@
 
     {% endif %} {% comment %} end if patient {% endcomment %}
   }
-]
