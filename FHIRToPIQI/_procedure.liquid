@@ -16,6 +16,8 @@
 
     "procedureDateTime": "{% if proc.performedDateTime %}{{ proc.performedDateTime }}{% elsif proc.performedPeriod.start %}{{ proc.performedPeriod.start }}{% endif %}",
     "procedurePerformedDate": "{% if proc.performedDateTime %}{{ proc.performedDateTime }}{% elsif proc.performedPeriod.start %}{{ proc.performedPeriod.start }}{% endif %}",
+    "procedureStartDatetime": "{% if proc.performedDateTime %}{{ proc.performedDateTime }}{% elsif proc.performedPeriod.start %}{{ proc.performedPeriod.start }}{% endif %}",
+    "procedureEndDatetime": "{% if proc.performedPeriod.end %}{{ proc.performedPeriod.end }}{% endif %}",
     {% if proc.status %}
     "procedureStatus": {
       "codings": [
